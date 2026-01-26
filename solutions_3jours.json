@@ -1,0 +1,473 @@
+[
+    {
+        "date": "2015-08-22",
+        "places": [
+            {
+                "name": "W1",
+                "products": [
+                    {
+                        "name": "heater",
+                        "quantity": 12
+                    },
+                    {
+                        "name": "conditioner",
+                        "quantity": 15
+                    }
+            ]
+            },
+            {
+                "name": "W2",
+                "products": [
+                    {
+                        "name": "heater",
+                        "quantity": 10
+                    },
+                    {
+                        "name": "conditioner",
+                        "quantity": 9
+                    }
+                ]
+            },
+            {
+                "name": "S1",
+                "products": [
+                    {
+                        "name": "heater",
+                        "quantity": 3
+                    },
+                    {
+                        "name": "conditioner",
+                        "quantity": 5
+                    }
+                ]
+            },
+            {
+                "name": "S2",
+                "products": [
+                    {
+                        "name": "heater",
+                        "quantity": 5
+                    },
+                    {
+                        "name": "conditioner",
+                        "quantity": 4
+                    }
+                ]
+            }
+        ],
+        "trucks": [
+            {
+                "home": "P1",
+                "delivery": [
+                    {
+                        "name": "W1",
+                        "products": [
+                            {
+                                "name": "heater",
+                                "quantity": 8
+                            },
+                            {
+                                "name": "conditioner",
+                                "quantity": 7
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "home": "W1",
+                "delivery": [
+                    {
+                        "name": "S1",
+                        "products": [
+                            {
+                                "name": "heater",
+                                "quantity": 2
+                            },
+                            {
+                                "name": "conditioner",
+                                "quantity": 1
+                            }
+                        ]
+                    },
+                    {
+                        "name": "S2",
+                        "products": [
+                            {
+                                "name": "heater",
+                                "quantity": 1
+                            },
+                            {
+                                "name": "conditioner",
+                                "quantity": 3
+                            }
+                        ]
+                    },
+                    {
+                        "name": "S3",
+                        "products": [
+                            {
+                                "name": "conditioner",
+                                "quantity": 2
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "home": "W2",
+                "delivery": [
+                    {
+                        "name": "S11",
+                        "products": [
+                            {
+                                "name": "heater",
+                                "quantity": 2
+                            },
+                            {
+                                "name": "conditioner",
+                                "quantity": 1
+                            }
+                        ]
+                    },
+                    {
+                        "name": "S12",
+                        "products": [
+                            {
+                                "name": "heater",
+                                "quantity": 1
+                            },
+                            {
+                                "name": "conditioner",
+                                "quantity": 3
+                            }
+                        ]
+                    },
+                    {
+                        "name": "S9",
+                        "products": [
+                            {
+                                "name": "conditioner",
+                                "quantity": 2
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "date": "2015-08-23",
+        "places": [
+            {
+                "name": "W1",
+                "products": [
+                    {
+                        "name": "heater",
+                        "quantity": 12
+                    },
+                    {
+                        "name": "conditioner",
+                        "quantity": 15
+                    }
+            ]
+            },
+            {
+                "name": "W2",
+                "products": [
+                    {
+                        "name": "heater",
+                        "quantity": 10
+                    },
+                    {
+                        "name": "conditioner",
+                        "quantity": 9
+                    }
+                ]
+            },
+            {
+                "name": "S1",
+                "products": [
+                    {
+                        "name": "heater",
+                        "quantity": 3
+                    },
+                    {
+                        "name": "conditioner",
+                        "quantity": 5
+                    }
+                ]
+            },
+            {
+                "name": "S2",
+                "products": [
+                    {
+                        "name": "heater",
+                        "quantity": 5
+                    },
+                    {
+                        "name": "conditioner",
+                        "quantity": 4
+                    }
+                ]
+            }
+        ],
+        "trucks": [
+            {
+                "home": "W1",
+                "delivery": [
+                    {
+                        "name": "P1",
+                        "products": [
+                            {
+                                "name": "heater",
+                                "quantity": 8
+                            },
+                            {
+                                "name": "conditioner",
+                                "quantity": 7
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "home": "W1",
+                "delivery": [
+                    {
+                        "name": "S1",
+                        "products": [
+                            {
+                                "name": "heater",
+                                "quantity": 2
+                            },
+                            {
+                                "name": "conditioner",
+                                "quantity": 1
+                            }
+                        ]
+                    },
+                    {
+                        "name": "S2",
+                        "products": [
+                            {
+                                "name": "heater",
+                                "quantity": 1
+                            },
+                            {
+                                "name": "conditioner",
+                                "quantity": 3
+                            }
+                        ]
+                    },
+                    {
+                        "name": "S3",
+                        "products": [
+                            {
+                                "name": "conditioner",
+                                "quantity": 2
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "home": "W2",
+                "delivery": [
+                    {
+                        "name": "S11",
+                        "products": [
+                            {
+                                "name": "heater",
+                                "quantity": 2
+                            },
+                            {
+                                "name": "conditioner",
+                                "quantity": 1
+                            }
+                        ]
+                    },
+                    {
+                        "name": "S19",
+                        "products": [
+                            {
+                                "name": "heater",
+                                "quantity": 1
+                            },
+                            {
+                                "name": "conditioner",
+                                "quantity": 3
+                            }
+                        ]
+                    },
+                    {
+                        "name": "S5",
+                        "products": [
+                            {
+                                "name": "conditioner",
+                                "quantity": 2
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "date": "2015-08-24",
+        "places": [
+            {
+                "name": "W1",
+                "products": [
+                    {
+                        "name": "heater",
+                        "quantity": 5
+                    },
+                    {
+                        "name": "conditioner",
+                        "quantity": 3
+                    }
+            ]
+            },
+            {
+                "name": "W2",
+                "products": [
+                    {
+                        "name": "heater",
+                        "quantity": 2
+                    },
+                    {
+                        "name": "conditioner",
+                        "quantity": 20
+                    }
+                ]
+            },
+            {
+                "name": "S1",
+                "products": [
+                    {
+                        "name": "heater",
+                        "quantity": 3
+                    },
+                    {
+                        "name": "conditioner",
+                        "quantity": 5
+                    }
+                ]
+            },
+            {
+                "name": "S2",
+                "products": [
+                    {
+                        "name": "heater",
+                        "quantity": 5
+                    },
+                    {
+                        "name": "conditioner",
+                        "quantity": 4
+                    }
+                ]
+            }
+        ],
+        "trucks": [
+            {
+                "home": "P1",
+                "delivery": [
+                    {
+                        "name": "W1",
+                        "products": [
+                            {
+                                "name": "heater",
+                                "quantity": 8
+                            },
+                            {
+                                "name": "conditioner",
+                                "quantity": 7
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "home": "W1",
+                "delivery": [
+                    {
+                        "name": "S1",
+                        "products": [
+                            {
+                                "name": "heater",
+                                "quantity": 2
+                            },
+                            {
+                                "name": "conditioner",
+                                "quantity": 1
+                            }
+                        ]
+                    },
+                    {
+                        "name": "S2",
+                        "products": [
+                            {
+                                "name": "heater",
+                                "quantity": 1
+                            },
+                            {
+                                "name": "conditioner",
+                                "quantity": 3
+                            }
+                        ]
+                    },
+                    {
+                        "name": "S3",
+                        "products": [
+                            {
+                                "name": "conditioner",
+                                "quantity": 2
+                            }
+                        ]
+                    }
+                ]
+            },
+            {
+                "home": "W2",
+                "delivery": [
+                    {
+                        "name": "S8",
+                        "products": [
+                            {
+                                "name": "heater",
+                                "quantity": 2
+                            },
+                            {
+                                "name": "conditioner",
+                                "quantity": 1
+                            }
+                        ]
+                    },
+                    {
+                        "name": "S19",
+                        "products": [
+                            {
+                                "name": "heater",
+                                "quantity": 1
+                            },
+                            {
+                                "name": "conditioner",
+                                "quantity": 3
+                            }
+                        ]
+                    },
+                    {
+                        "name": "S17",
+                        "products": [
+                            {
+                                "name": "conditioner",
+                                "quantity": 2
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+    }
+]

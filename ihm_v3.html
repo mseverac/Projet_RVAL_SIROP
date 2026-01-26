@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/crossfilter2/1.4.3/crossfilter.min.js"></script>
+    <script type="text/javascript" src="https://d3js.org/d3.v4.min.js"></script>
+    <script defer src="https://use.fontawesome.com/releases/v5.0.6/js/all.js"></script>
+    <style>
+        #drop_zone {
+            border: 2px dashed grey;
+            width: 300px;
+            height: 50px;
+            margin: 10px;
+        }
+
+        .line {
+            fill: none; //stroke: steelblue;
+            stroke-width: 2px;
+        }
+
+        .grid line {
+            stroke: lightgrey;
+            stroke-opacity: 0.7;
+            shape-rendering: crispEdges;
+        }
+
+        .stock_label {
+            font-size: xx-small;
+        }
+
+    </style>
+</head>
+
+<body>
+    <h1>Delivery tours</h1>
+    <div id="drop_zone" ondrop="drop_handler(event);" ondragover="dragover_handler(event);" ondragend="dragend_handler(event);">
+        <strong>Drag one JSON solution file here ...</strong>
+    </div>
+    <div id="explorer">
+        <div id="control"></div>
+    </div>
+
+    <div id="info"> </div>
+
+    <script>
+        var width, height, margin;
+
+        var data;
+        var current_selection = 0;
+        var xscale, yscale;
+
+        var map_data = [{
+            "name": "P1",
+            "x": 1,
+            "y": 2,
+            "radius": 1
+        }, {
+            "name": "P2",
+            "x": 6,
+            "y": 5,
+            "radius": 1
+        }, {
+            "name": "W1",
+            "x": 4,
+            "y": 3,
+            "radius": 1
+        }, {
+            "name": "W2",
+            "x": 9,
+            "y": 4,
+            "radius": 1
+        }, {
+            "name": "S1",
+            "x": 2,
+            "y": 0,
+            "radius": 1
+        }, {
+            "name": "S2",
+            "x": 10,
+            "y": 0,
+            "radius": 1
+        }, {
+            "name": "S3",
+            "x": 3,
+            "y": 1,
+            "radius": 1
+        }, {
+            "name": "S4",
+            "x": 5,
+            "y": 1,
+            "radius": 1
+        }, {
+            "name": "S5",
+            "x": 8,
+            "y": 1,
+            "radius": 1
+        }, {
+            "name": "S6",
+            "x": 0,
+            "y": 2,
+            "radius": 1
+        }, {
+            "name": "S7",
+            "x": 2,
+            "y": 3,
+            "radius": 1
+        }, {
+            "name": "S8",
+            "x": 6,
+            "y": 3,
+            "radius": 1
+        }, {
+            "name": "S9",
+            "x": 10,
+            "y": 3,
+            "radius": 1
+        }, {
+            "name": "S10",
+            "x": 12,
+            "y": 3,
+            "radius": 1
+        }, {
+            name: "S11",
+            "x": 1,
+            "y": 4,
+            "radius": 1
+        }, {
+            name: "S12",
+            "x": 4,
+            "y": 4,
+            "radius": 1
+        }, {
+            "name": "S13",
+            "x": 11,
+            "y": 4,
+            "radius": 1
+        }, {
+            "name": "S14",
+            "x": 3,
+            "y": 5,
+            "radius": 1
+        }, {
+            "name": "S15",
+            "x": 8,
+            "y": 5,
+            "radius": 1
+        }, {
+            "name": "S16",
+            "x": 10,
+            "y": 5,
+            "radius": 1
+        }, {
+            "name": "S17",
+            "x": 2,
+            "y": 6,
+            "radius": 1
+        }, {
+            "name": "S18",
+            "x": 4,
+            "y": 6,
+            "radius": 1
+        }, {
+            "name": "S19",
+            "x": 7,
+            "y": 6,
+            "radius": 1
+        }, {
+            "name": "S20",
+            "x": 12,
+            "y": 6,
+            "radius": 1
+        }];
+
+        var locations = {};
+
+        for (let place of map_data) {
+            locations[place.name] = new Object({
+                "x": place.x,
+                "y": place.y
+            });
+        }
+        //console.log(locations)
+
+        var color_names = ["Aquamarine", "Brown", "DarkGreen", "Coral", "DarkSlateBlue", "DimGray", "Fuchsia", "Gold", "HotPink", "LightSkyBlue", "LimeGreen", "MidnightBlue", "Moccasin", "OrangeRed", "RoyalBlue", "SeaGreen", "Sienna", "Thistle", "YellowGreen"];
+
+        function parse_data_json(raw_data) {
+            try {
+                data = JSON.parse(raw_data);
+                console.log("JSON Parse OK");
+                return 1;
+            } catch (err) {
+                console.log(`There was an error: ${err}`);
+                return 0;
+            }
+        }
+
+        function update_svg(cur_data) {
+            for (let pl of cur_data.places) {
+                sum_prod = (products, pname) => {
+                    var s = 0;
+                    for (let p of products) {
+                        if (pname == p.name)
+                            s += p.quantity;
+                    }
+                    return s;
+                };
+                //d3.select("#" + pl.name).attr("r", sum_prod(pl.products) / 2.);
+                var h_h = sum_prod(pl.products, 'heater');
+                var h_c = sum_prod(pl.products, 'conditioner');
+                d3.select("#" + pl.name + "_h").attr("height", 2 * h_h)
+                    .on("mouseover", function(d) { // add the function to call when mouse goes over
+                        // show the solution details
+                        d3.select("#info").html("Number of heater products:" + h_h);
+                    })
+                    .on("mouseout", function() { // add the function to call when mouse goes out the rectangle
+                        d3.select("#info").html("");
+                    });
+                //                d3.select("#" + pl.name+"_h").attr("y", yscale(locations[pl.name].y)-2*h_h);
+                d3.select("#" + pl.name + "_c").attr("height", 2 * h_c)
+                    .on("mouseover", function(d) { // add the function to call when mouse goes over
+                        // show the solution details
+                        d3.select("#info").html("Number of conditioner products:" + h_c);
+                    })
+                    .on("mouseout", function() { // add the function to call when mouse goes out the rectangle
+                        d3.select("#info").html("");
+                    });
+            }
+
+            // define the line
+            var valueline = d3.line()
+                .x(function(d) {
+                    return xscale(+locations[d].x);
+                })
+                .y(function(d) {
+                    return yscale(+locations[d].y);
+                });
+            
+            for (var i = 0; i < cur_data.trucks.length; i++) {
+                var truck = cur_data.trucks[i];
+                var travel = new Array();
+                travel.push(truck.home);
+                for (var j = 0; j < truck.delivery.length; j++)
+                    travel.push(truck.delivery[j].name);
+                travel.push(truck.home);
+
+                d3.select("#view").append("path").data([travel])
+                    .attr("class", "line")
+                    .attr("stroke", color_names[i % color_names.length])
+                    .attr("d", valueline);
+            }
+
+        }
+
+
+        function create_control(node) {
+            var init_val = 1;
+            var txt_node = node.append("span").attr("id", "ctrl_label").html("Current date = " + init_val);
+            var ctrl_node = node.append("input")
+                .attr("type", "range")
+                .attr("min", "1")
+                .attr("max", data.length.toString())
+                .attr("value", init_val)
+                .attr("id", "date_range")
+                .on("input", function() {
+                    d3.select("#ctrl_label").html("Current date = " + this.value);
+                    current_selection = parseInt(this.value) - 1;
+                    d3.selectAll(".line").remove();
+                    update_svg(data[current_selection]);
+                });
+
+        }
+
+        // Create the initial drawing with default values
+        function create_svg(node, w = 800, h = 400, marg = null) {
+            // Define margins for the graphic to place axis
+            if (marg == null) {
+                margin = {
+                    top: 20,
+                    right: 20,
+                    bottom: 50,
+                    left: 70
+                };
+            } else {
+                margin = marg;
+            }
+            width = w - margin.left - margin.right;
+            height = h - margin.top - margin.bottom;
+
+
+            // create new svg node to store the graphic
+            var svg = node.append("svg")
+                .attr('xmlns:xlink', 'http://www.w3.org/1999/xlink')
+                .attr('width', w)
+                .attr('height', h)
+                .attr('id', 'plot_0');
+
+
+            var view = svg.append('g')
+                .attr('id', 'view')
+                .attr('transform', "translate(" + margin.left + "," + margin.top + ")");
+
+            // Initialize scale objects
+            xscale = d3.scaleLinear().range([0, width]);
+            yscale = d3.scaleLinear().range([height, 0]);
+
+
+            var x_dom = d3.extent(map_data, (d) => {
+                return d.x;
+            });
+            var y_dom = d3.extent(map_data, (d) => {
+                return d.y;
+            });
+            // Define scale domain relating to current dimensions
+            xscale.domain(x_dom);
+            yscale.domain([y_dom[1], y_dom[0]]);
+
+            // gridlines in x axis function
+            function make_x_gridlines() {
+                return d3.axisBottom(xscale)
+                    .ticks(x_dom[1] - x_dom[0])
+            }
+
+            // gridlines in y axis function
+            function make_y_gridlines() {
+                return d3.axisLeft(yscale)
+                    .ticks(y_dom[1] - y_dom[0])
+            }
+
+            // add the X gridlines
+            view.append("g")
+                .attr("class", "grid")
+                .attr("transform", "translate(0," + height + ")")
+                .call(make_x_gridlines()
+                    .tickSize(-height)
+                    .tickFormat("--")
+                )
+
+            // add the Y gridlines
+            view.append("g")
+                .attr("class", "grid")
+                .call(make_y_gridlines()
+                    .tickSize(-width)
+                    .tickFormat("")
+                )
+
+            var r_w = 5;
+            var r_h = 5;
+            var rect = view.append("g").selectAll("rect").data(map_data).enter().append("rect")
+                .attr("x", function(d) {
+                    return xscale(d.x) - r_w;
+                })
+                .attr("y", function(d) {
+                    return yscale(d.y);
+                })
+                .attr("width", function(d) {
+                    return r_w;
+                })
+                .attr("height", function(d) {
+                    return r_h;
+                })
+                .attr("id", function(d) {
+                    return d.name + "_h";
+                })
+                .style("fill", function(d) {
+                    return "red";
+                });
+            var rect = view.append("g").selectAll("rect").data(map_data).enter().append("rect")
+                .attr("x", function(d) {
+                    return xscale(d.x);
+                })
+                .attr("y", function(d) {
+                    return yscale(d.y);
+                })
+                .attr("width", function(d) {
+                    return r_w;
+                })
+                .attr("height", function(d) {
+                    return r_h;
+                })
+                .attr("id", function(d) {
+                    return d.name + "_c";
+                })
+                .style("fill", function(d) {
+                    return "blue";
+                });
+
+
+            var names = view.append("g").attr("id", "labels").selectAll("text").data(map_data).enter().append("text")
+                .attr("x", function(d) {
+                    return xscale(d.x);
+                })
+                .attr("y", function(d) {
+                    return yscale(d.y);
+                })
+                .attr("id", function(d) {
+                    return "t_" + d.name;
+                })
+                .html(function(d) {
+                    return d.name;
+                });
+
+            update_svg(data[current_selection]);
+        }
+
+
+        // Function that handle the manifold file drop
+        function drop_handler(ev) {
+            ev.preventDefault();
+            console.log("Drop");
+            // If dropped items aren't files, reject them
+            var dt = ev.dataTransfer;
+            if (dt.items) {
+                // Use DataTransferItemList interface to access the file(s)
+                for (var i = 0; i < dt.items.length; i++) {
+                    if (dt.items[i].kind == "file") {
+                        // Remove previous elements if a drawing exists
+                        d3.select("#explorer").selectAll("svg").remove();
+                        d3.select("#explorer").selectAll("select").remove();
+                        d3.select("#explorer").selectAll("input").remove();
+
+                        // Process the ith file, normally only 1 file to process
+                        var f = dt.items[i].getAsFile();
+
+                        {
+                            var reader = new FileReader();
+
+                            // Function called after data loading achieved
+                            reader.onloadend = function() {
+                                //console.log("Input data: " + reader.result);
+                                if (parse_data_json(reader.result) == 1) {
+
+                                } else {
+                                    console.log("Wrong file format!");
+                                }
+
+                                create_svg(d3.select("#explorer"));
+                                create_control(d3.select("#control"));
+                            }
+
+                            reader.readAsText(f);
+                        }
+                    }
+                }
+            } else {
+                // Use DataTransfer interface to access the file(s)
+                for (var i = 0; i < dt.files.length; i++) {
+                    console.log("... file[" + i + "].name = " + dt.files[i].name);
+                }
+            }
+        }
+
+        function dragover_handler(ev) {
+            // Prevent default select and drag behavior
+            ev.preventDefault();
+        }
+
+        function dragend_handler(ev) {
+            // Remove all of the drag data
+            var dt = ev.dataTransfer;
+            if (dt.items) {
+                // Use DataTransferItemList interface to remove the drag data
+                for (var i = 0; i < dt.items.length; i++) {
+                    dt.items.remove(i);
+                }
+            } else {
+                // Use DataTransfer interface to remove the drag data
+                ev.dataTransfer.clearData();
+            }
+        }
+
+    </script>
+</body>
+
+</html>
+<html><head></head><body></body></html>

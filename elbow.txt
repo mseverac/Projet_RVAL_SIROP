@@ -1,0 +1,49 @@
+def My_function_kmeans_elbow(max_clusters,df, Input_cols, dim1, dim2):# Finding the Optimal Number of Clusters - Plotting Elbow Curve
+#max_clusters: int limit number of clusters tested,df: panda with population, Input_cols: string with the names of the input columns, dim1: string name of the X axis displayed, dim2: string name of the Y axis displayed
+#needed structures
+    norm = np.linalg.norm
+#arrays
+    ssd = []
+    distances= []
+    range_n_clusters = np.arange(1, (max_clusters+1), 1)
+#integers
+    diff=0
+    best=0
+    #print(range_n_clusters)
+    for num_clusters in range_n_clusters:
+        print(num_clusters) 
+    #print(Norm_32[Input_cols])
+        name='Prediction_kmean'+ str(num_clusters)
+        kmeans = KMeans(n_clusters=num_clusters, max_iter=50,init='random')
+        kmeans.fit(df[Input_cols])     
+        ssd.append(kmeans.inertia_)
+     #actual prediction
+        y_pred_kmean = kmeans.predict(df[Input_cols])
+        #We store the K-means results in a dataframe
+        pred = pd.DataFrame(y_pred_kmean)    
+        pred.columns = [name]
+        print(name)
+        df = pd.concat([df,pred], axis = 1)
+    #print graph
+        sns.scatterplot(x=dim1, y=dim2, hue=name,  data=df)
+        plt.legend(loc='center left', bbox_to_anchor=(1.25, 0.5), ncol=1)
+        plt.title(name) 
+        plt.show()     
+
+        # silhouette analysis  
+    p1 = np.array([1,ssd[0]])    
+    p2 = np.array([max_clusters,ssd[max_clusters-1]])    
+    for i in range(0,max_clusters):        
+        p = np.array([i+1,ssd[i]])        
+        distances.append(norm(np.cross(p2-p1, p1-p))/norm(p2-p1))    
+    size=len(ssd)+1
+    ax1 = plt.subplot()
+    l1, = ax1.plot(ssd, color='blue')
+    ax2 = ax1.twinx()
+    l2, = ax2.plot(distances, color='orange')
+    plt.legend(loc='center left', bbox_to_anchor=(1.25, 0.5), ncol=1)
+    plt.legend([l1, l2], ["Inertia", "Distances"])
+    plt.show()
+    #identification of the Elbow
+    best=distances.index(max(distances))+1 
+    print('The maximimal increase is obtained for '+ str(best)+' clusters' )
