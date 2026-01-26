@@ -1,4 +1,5 @@
 from utils import *
+import matplotlib.pyplot as plt
 
 shops_capacities = [15,15,20,20,15,20,30,30,35,25,30,30,30,35,30,40,25,20,15,20]
 
@@ -20,6 +21,36 @@ def print_configuration():
     print("Warehouses :")
     for warehouse in warehouses:
         print(f"Warehouse {warehouse.id} at position ({warehouse.x},{warehouse.y}) with stock {warehouse.current_stock}")
+
     print("Shops :")
     for shop in shops:
         print(f"Shop {shop.id} at position ({shop.x},{shop.y}) with capacity {shop.capacity} and current stock {shop.current_stock}")
+
+
+#print_configuration()
+
+def plot_configuration():
+    plt.figure(figsize=(10,6))
+    for plant in plants:
+        plt.scatter(plant.x, plant.y, c='green', marker='x', s=50, label='Plant' if plant.id == 0 else "")
+        plt.text(plant.x, plant.y, f"P{plant.id}", fontsize=12, ha='center', va='center', color='black')
+
+    for warehouse in warehouses:
+        plt.scatter(warehouse.x, warehouse.y, c='blue', marker='x', s=50, label='Warehouse' if warehouse.id == 0 else "")
+        plt.text(warehouse.x, warehouse.y, f"W{warehouse.id}", fontsize=12, ha='center', va='center', color='black')
+        plt.text(warehouse.x, warehouse.y-0.2, f"S:{warehouse.current_stock}", fontsize=10, ha='center', va='center', color='black')
+
+    for shop in shops:
+        plt.scatter(shop.x, shop.y, c='red', marker='x', s=50, label='Shop' if shop.id == 0 else "")
+        plt.text(shop.x, shop.y, f"S{shop.id}", fontsize=12, ha='center', va='center', color='black')
+        plt.text(shop.x, shop.y-0.2, f"C:{shop.current_stock}", fontsize=10, ha='center', va='center', color='black')
+    
+    plt.title("Stock Configuration")
+    plt.xlabel("X Coordinate")
+    plt.ylabel("Y Coordinate")
+    plt.legend()
+    plt.grid()
+    plt.show()
+
+
+#plot_configuration()
