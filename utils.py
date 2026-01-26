@@ -1,4 +1,4 @@
-
+import matplotlib.pyplot as plt
 TRUCK_CAPACITY = 20 # m3
 WAREHOUSE_CAPACITY = 650 # items for each product
 
@@ -9,6 +9,8 @@ V_clim = 0.8 # m3
 def add_tuples(t1, t2):
     return (t1[0] + t2[0], t1[1] + t2[1])
 
+def sub_tuples(t1, t2):
+    return (t1[0] - t2[0], t1[1] - t2[1])
 
 class Shop : 
     def __init__(self,id,x,y,capacity):
@@ -120,3 +122,63 @@ class Tournee:
 
         return total_distance
             
+
+
+
+class Configuration():
+    def __init__(self, plants, warehouses, shops):
+        self.plants = plants
+        self.warehouses = warehouses
+        self.shops = shops
+
+    def print(self):
+        print("Plants :")
+        for plant in self.plants:
+            print(f"Plant {plant.id} at position ({plant.x},{plant.y})")
+        print("Warehouses :")
+        for warehouse in self.warehouses:
+            print(f"Warehouse {warehouse.id} at position ({warehouse.x},{warehouse.y}) with stock {warehouse.current_stock}")
+
+        print("Shops :")
+        for shop in self.shops:
+            print(f"Shop {shop.id} at position ({shop.x},{shop.y}) with capacity {shop.capacity} and current stock {shop.current_stock}")
+
+    def plot(self):
+        plt.figure(figsize=(10,6))
+        for plant in self.plants:
+            plt.scatter(plant.x, plant.y, c='green', marker='x', s=50, label='Plant' if plant.id == 0 else "")
+            plt.text(plant.x, plant.y, f"P{plant.id}", fontsize=12, ha='center', va='center', color='black')
+
+        for warehouse in self.warehouses:
+            plt.scatter(warehouse.x, warehouse.y, c='blue', marker='x', s=50, label='Warehouse' if warehouse.id == 0 else "")
+            plt.text(warehouse.x, warehouse.y, f"W{warehouse.id}", fontsize=12, ha='center', va='center', color='black')
+            plt.text(warehouse.x, warehouse.y-0.2, f"S:{warehouse.current_stock}", fontsize=10, ha='center', va='center', color='black')
+
+        for shop in self.shops:
+            plt.scatter(shop.x, shop.y, c='red', marker='x', s=50, label='Shop' if shop.id == 0 else "")
+            plt.text(shop.x, shop.y, f"S{shop.id}", fontsize=12, ha='center', va='center', color='black')
+            plt.text(shop.x, shop.y-0.2, f"C:{shop.current_stock}", fontsize=10, ha='center', va='center', color='black')
+        
+        plt.title("Stock Configuration")
+        plt.xlabel("X Coordinate")
+        plt.ylabel("Y Coordinate")
+        plt.legend()
+        plt.grid()
+        plt.show()
+
+
+def configuration_initiale():
+    shops_capacities = [15,15,20,20,15,20,30,30,35,25,30,30,30,35,30,40,25,20,15,20]
+
+    plant_positions = [(1,2),(6,5)]
+    warehouse_positions = [(4,3),(9,4)]
+    shop_positions = [(2,0),(10,0),(3,1),(5,1),(8,1),(0,2),(2,3),(6,3),(10,3),(12,3),
+                    (1,4),(4,4),(11,4),(3,5),(8,5),(10,5),(2,6),(4,6),(7,6),(12,6)]
+
+
+    plants = [Plant(i,plant_positions[i][0],plant_positions[i][1]) for i in range(len(plant_positions))]
+    warehouses = [Warehouse(i,warehouse_positions[i][0],warehouse_positions[i][1]) for i in range(len(warehouse_positions))]
+    shops = [Shop(i,shop_positions[i][0],shop_positions[i][1],shops_capacities[i]) for i in range(len(shop_positions))]
+
+
+    return Configuration(plants, warehouses, shops)
