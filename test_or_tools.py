@@ -1,118 +1,157 @@
-from ortools.constraint_solver import routing_enums_pb2
-from ortools.constraint_solver import pywrapcp
-import numpy as np
+from ortools.constraint_solver import pywrapcp, routing_enums_pb2
 
-# ---------------------------
-# DATA
-# ---------------------------
+from configuration import *
+from espérence_perte import *
 
-def create_data_model():
-    data = {}
 
-    data["num_depots"] = 4
-    data["num_shops"] = 20
-    data["num_nodes"] = data["num_depots"] + data["num_shops"]
+TRUCK_CAPACITY = 20 # m3
 
-    data["num_vehicles"] = 6  # par exemple
 
-    # Dépôts possibles pour chaque camion
-    data["starts"] = [0, 1, 2, 3, 0, 1]
-    data["ends"]   = [0, 1, 2, 3, 0, 1]
+def compute_shop_demands(config_init, config_goal):
+    demands = {}
+    for shop_init, shop_goal in zip(config_init.shops, config_goal.shops):
+        dh = shop_goal.current_stock[0] - shop_init.current_stock[0]
+        dc = shop_goal.current_stock[1] - shop_init.current_stock[1]
+        if dh < 0 or dc < 0:
+            raise ValueError("Negative demand at shop")
+        demands[shop_init.id] = (dh, dc)
+    return demands
 
-    # Matrice de coûts (EXEMPLE)
-    np.random.seed(0)
-    cost_matrix = np.random.randint(10, 100, size=(data["num_nodes"], data["num_nodes"]))
-    np.fill_diagonal(cost_matrix, 0)
 
-    data["cost_matrix"] = cost_matrix.tolist()
 
-    return data
+def shop_volume(demand):
+    return V_heater * demand[0] + V_clim * demand[1]
 
-# ---------------------------
-# MODEL
-# ---------------------------
 
-def main():
-    data = create_data_model()
+def solve_warehouse_vrp(warehouse, shops, demands):
+    # Nodes: depot + shops with demand > 0
+    nodes = [warehouse] + [s for s in shops if demands[s.id] != (0,0)]
+    node_ids = {node.id: i for i, node in enumerate(nodes)}
+
+    def distance_cb(from_i, to_i):
+        a = nodes[from_i]
+        b = nodes[to_i]
+        return int((a.x-b.x)+ (a.y-b.y))
 
     manager = pywrapcp.RoutingIndexManager(
-        data["num_nodes"],
-        data["num_vehicles"],
-        data["starts"],
-        data["ends"]
+        len(nodes),
+        len(nodes),      # unlimited vehicles
+        0                # depot index
     )
 
     routing = pywrapcp.RoutingModel(manager)
 
-    # ---------------------------
-    # COST CALLBACK
-    # ---------------------------
-    def cost_callback(from_index, to_index):
-        from_node = manager.IndexToNode(from_index)
-        to_node = manager.IndexToNode(to_index)
-        return data["cost_matrix"][from_node][to_node]
+    transit_cb = routing.RegisterTransitCallback(
+        lambda i, j: distance_cb(manager.IndexToNode(i),
+                                 manager.IndexToNode(j))
+    )
 
-    transit_callback_index = routing.RegisterTransitCallback(cost_callback)
-    routing.SetArcCostEvaluatorOfAllVehicles(transit_callback_index)
+    routing.SetArcCostEvaluatorOfAllVehicles(transit_cb)
 
-    # ---------------------------
-    # CONSTRAINTS
-    # ---------------------------
+    # Capacity constraint (volume)
+    def demand_cb(index):
+        node = nodes[manager.IndexToNode(index)]
+        if isinstance(node, Warehouse):
+            return 0
+        return int(100 * shop_volume(demands[node.id]))
 
-    # Chaque shop est visité exactement une fois
-    for shop in range(data["num_depots"], data["num_nodes"]):
-        routing.AddDisjunction([manager.NodeToIndex(shop)], 10_000)
+    demand_callback_index = routing.RegisterUnaryTransitCallback(demand_cb)
 
-    # ---------------------------
-    # SOLVER PARAMS
-    # ---------------------------
-    search_parameters = pywrapcp.DefaultRoutingSearchParameters()
-    search_parameters.first_solution_strategy = (
+    routing.AddDimensionWithVehicleCapacity(
+        demand_callback_index,
+        0,
+        [int(100 * TRUCK_CAPACITY)] * len(nodes),
+        True,
+        "Capacity"
+    )
+
+    print("begin solving VRP...")
+
+    search_params = pywrapcp.DefaultRoutingSearchParameters()
+    search_params.first_solution_strategy = (
         routing_enums_pb2.FirstSolutionStrategy.PATH_CHEAPEST_ARC
     )
-    search_parameters.local_search_metaheuristic = (
-        routing_enums_pb2.LocalSearchMetaheuristic.GUIDED_LOCAL_SEARCH
-    )
-    search_parameters.time_limit.seconds = 10
 
-    # ---------------------------
-    # SOLVE
-    # ---------------------------
-    solution = routing.SolveWithParameters(search_parameters)
+    search_params.time_limit.seconds = 300
 
-    if solution:
-        print_solution(data, manager, routing, solution)
-    else:
-        print("Pas de solution trouvée")
+    print("searching for solution...")
 
-# ---------------------------
-# DISPLAY
-# ---------------------------
 
-def print_solution(data, manager, routing, solution):
-    total_cost = 0
 
-    for vehicle_id in range(data["num_vehicles"]):
-        index = routing.Start(vehicle_id)
-        route_cost = 0
-        route = []
 
+    solution = routing.SolveWithParameters(search_params)
+    if not solution:
+        return []
+    
+    print("solution found!")
+
+    tours = []
+
+    for v in range(len(nodes)):
+        index = routing.Start(v)
+        if routing.IsEnd(solution.Value(routing.NextVar(index))):
+            continue
+
+        tour = []
         while not routing.IsEnd(index):
-            node = manager.IndexToNode(index)
-            route.append(node)
-            previous_index = index
+            node = nodes[manager.IndexToNode(index)]
+            if not isinstance(node, Warehouse):
+                tour.append(node)
             index = solution.Value(routing.NextVar(index))
-            route_cost += routing.GetArcCostForVehicle(previous_index, index, vehicle_id)
 
-        route.append(manager.IndexToNode(index))
-        total_cost += route_cost
+        if tour:
+            tours.append(tour)
 
-        print(f"Camion {vehicle_id} : {route} | coût = {route_cost}")
+    return tours
 
-    print(f"\nCoût total = {total_cost}")
 
-# ---------------------------
-# RUN
-# ---------------------------
+def build_tournees(config_init, config_goal):
+    demands = compute_shop_demands(config_init, config_goal)
+    print("Demands:", demands)
+    tournees = []
+
+    for warehouse in config_init.warehouses:
+        
+        tours = solve_warehouse_vrp(warehouse, config_init.shops, demands)
+
+        print(f"Tours for warehouse {warehouse.id}: {tours}")
+
+        for tour in tours:
+            arrets = []
+            remaining_volume = TRUCK_CAPACITY
+
+            for shop in tour:
+                dh, dc = demands[shop.id]
+                max_h = min(dh, remaining_volume // V_heater)
+                remaining_volume -= max_h * V_heater
+                max_c = min(dc, remaining_volume // V_clim)
+
+                delivered = (int(max_h), int(max_c))
+                demands[shop.id] = (
+                    dh - delivered[0],
+                    dc - delivered[1]
+                )
+
+                arrets.append((shop, delivered))
+
+            tournees.append(Tournee(warehouse, arrets))
+
+    return tournees
+
+
 if __name__ == "__main__":
-    main()
+    C0 = configuration_initiale()
+    C1 = configuration_minimale("Mai", df)
+
+    C1.plot()
+
+    tournees = build_tournees(C0, C1)
+
+    print("Tournees planned:")
+    print(tournees)
+
+    for i, tournee in enumerate(tournees):
+        print(f"Tournee {i+1}:")
+        for lieu, amount in tournee.list_arrets:
+            print(f"  Stop at {lieu.id} to deliver {amount}")
+        print(f"  Total distance: {tournee.calculer_distance_totale():.2f}\n")

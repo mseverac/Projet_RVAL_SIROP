@@ -92,7 +92,7 @@ class Tournee:
     def is_valid(self):
         remplissage_camion = 0
         for lieu, amount in self.list_arrets:
-            remplissage_camion += V_heater * amount[0] + V_clim * amount[1]
+            remplissage_camion += V_clim * amount[0] + V_heater * amount[1]
             if remplissage_camion > TRUCK_CAPACITY:
                 return False
             if not lieu.can_truck_stop(amount):
@@ -105,7 +105,7 @@ class Tournee:
         for lieu, amount in self.list_arrets:
             lieu.truck_stop(amount)
 
-            remplissage_camion += V_heater * amount[0] + V_clim * amount[1]
+            remplissage_camion += V_clim * amount[0] + V_heater * amount[1]
             if remplissage_camion > TRUCK_CAPACITY:
                 raise ValueError("Truck over capacity")
             
@@ -162,7 +162,7 @@ class Configuration():
         plt.title("Stock Configuration")
         plt.xlabel("X Coordinate")
         plt.ylabel("Y Coordinate")
-        plt.legend()
+        #plt.legend()
         plt.grid()
         plt.show()
 
