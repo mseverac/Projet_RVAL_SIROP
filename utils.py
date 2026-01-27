@@ -1,4 +1,5 @@
 import matplotlib.pyplot as plt
+import math as ma
 TRUCK_CAPACITY = 20 # m3
 WAREHOUSE_CAPACITY = 650 # items for each product
 
@@ -81,7 +82,6 @@ class Plant :
 
 def distance(a, b):
     return ((a.x - b.x)+ (a.y - b.y))
-
 
 
 class Tournee:
@@ -182,3 +182,49 @@ def configuration_initiale():
 
 
     return Configuration(plants, warehouses, shops)
+
+
+def configuration_parfaite():
+
+    C0 = configuration_initiale()
+    # Remplir les entrepots
+    for warehouse in C0.warehouses:
+        warehouse.current_stock = (WAREHOUSE_CAPACITY, WAREHOUSE_CAPACITY)
+    # Remplir les magasins
+    for shop in C0.shops:
+        shop.current_stock = shop.capacity
+    return C0
+
+
+CONFIG_PARFAITE = configuration_parfaite()
+
+
+
+def config_dist_to_parfaite(config: Configuration):
+    total_distance = 0
+
+    for warehouse in config.warehouses:
+        stock_ideal = CONFIG_PARFAITE.warehouses[warehouse.id].current_stock
+        stock_actuel = warehouse.current_stock
+        diff_stock = sub_tuples(stock_ideal, stock_actuel)
+        total_distance += (diff_stock[0])**2 + (diff_stock[1])**2
+
+    for shop in config.shops:
+        stock_ideal = CONFIG_PARFAITE.shops[shop.id].current_stock
+        stock_actuel = shop.current_stock
+        diff_stock = sub_tuples(stock_ideal, stock_actuel)
+        total_distance += (diff_stock[0])**2 + (diff_stock[1])**2
+
+    return ma.sqrt(total_distance)
+
+
+
+
+
+
+
+
+
+
+
+
