@@ -15,31 +15,37 @@ def plot_solution(data, manager, routing, solution):
     for vehicle_id in range(data["num_vehicles"]):
         if not routing.IsVehicleUsed(solution, vehicle_id):
             continue
+
         route = []
         index = routing.Start(vehicle_id)
         while not routing.IsEnd(index):
             route.append(manager.IndexToNode(index))
             index = solution.Value(routing.NextVar(index))
         route.append(manager.IndexToNode(index))
-        routes.append(route)
+        routes.append((vehicle_id, route))
 
     plt.figure(figsize=(12, 10))
-    colors = ['r', 'b', 'g', 'm', 'c', 'y']
+    colors = ['r', 'b', 'g', 'm', 'c', 'y', 'orange', 'purple']
 
+    # Clients
     for i, (x, y) in enumerate(locations):
-        plt.plot(x, y, 'ko', markersize=8)
+        plt.plot(x, y, 'ko', markersize=7)
         plt.text(
-            x + 20, y + 20,
-            f"{i} ({data['demands'][i]}, {data['demands2'][i]})",
-            fontsize=10
+            x + 15, y + 15,
+            f"{i}",
+            fontsize=9
         )
 
-    depot_x, depot_y = locations[data["depot"]]
-    plt.plot(depot_x, depot_y, 'r*', markersize=20, label='Depot')
+    # Dépôts
+    for depot in data["depots"]:
+        x, y = locations[depot]
+        plt.plot(x, y, 'r*', markersize=20)
+        plt.text(x + 20, y + 20, f"Dépôt {depot}", fontsize=12, color='red')
 
-    for vehicle_id, route in enumerate(routes):
-        x_coords = [locations[node][0] for node in route]
-        y_coords = [locations[node][1] for node in route]
+    # Routes
+    for vehicle_id, route in routes:
+        x_coords = [locations[n][0] for n in route]
+        y_coords = [locations[n][1] for n in route]
         plt.plot(
             x_coords, y_coords,
             color=colors[vehicle_id % len(colors)],
@@ -47,11 +53,11 @@ def plot_solution(data, manager, routing, solution):
             label=f'Vehicle {vehicle_id}'
         )
 
-    plt.xlabel('X coordinate')
-    plt.ylabel('Y coordinate')
-    plt.title('CVRP avec contrainte de volume')
-    plt.legend()
+    plt.title("CVRP multi-dépôts (2 dépôts, capacité volume)")
+    plt.xlabel("X")
+    plt.ylabel("Y")
     plt.grid(True)
+    plt.legend(fontsize=8)
     plt.show()
 
 
@@ -79,12 +85,12 @@ def create_data_model():
     ]
 
     data["demands"]  = [0, 1, 1, 2, 4, 2, 4, 8, 8, 1, 2, 1, 2, 4, 4, 8, 8]
-    #data["demands2"] = [0, 1, 0, 0, 2, 2, 3, 3, 8, 1, 2, 1, 2, 4, 2, 3, 4]
     data["demands2"] = [0, 1, 1, 2, 4, 2, 4, 8, 8, 1, 2, 1, 2, 4, 4, 8, 8]
 
-    data["num_vehicles"] = 10
-    data["vehicle_volume_capacity"] = [100] * data["num_vehicles"]  # 20 m3 * 10
-    data["depot"] = 0
+    data["depots"] = [0, 1]
+
+    data["num_vehicles"] = 20
+    data["vehicle_volume_capacity"] = [100] * data["num_vehicles"]
 
     return data
 
@@ -106,25 +112,29 @@ def print_solution(data, manager, routing, solution):
             node = manager.IndexToNode(index)
             load = solution.Value(volume_dim.CumulVar(index))
             print(f" {node} (Volume={load/10:.1f} m3) -> ", end="")
-
             next_index = solution.Value(routing.NextVar(index))
             route_distance += routing.GetArcCostForVehicle(
                 index, next_index, vehicle_id
             )
             index = next_index
 
+        node = manager.IndexToNode(index)
         load = solution.Value(volume_dim.CumulVar(index))
-        print(f"{manager.IndexToNode(index)} (Volume={load/10:.1f} m3)")
+        print(f"{node} (Volume={load/10:.1f} m3)")
         print(f" Distance: {route_distance}")
 
 
 def main():
     data = create_data_model()
 
+    starts = [0]*10 + [1]*10
+    ends   = [0]*10 + [1]*10
+
     manager = pywrapcp.RoutingIndexManager(
         len(data["distance_matrix"]),
         data["num_vehicles"],
-        data["depot"]
+        starts,
+        ends
     )
 
     routing = pywrapcp.RoutingModel(manager)
@@ -140,13 +150,9 @@ def main():
         routing.RegisterTransitCallback(distance_callback)
     )
 
-    # Volume callback (scaled by 10)
     def volume_callback(from_index):
         node = manager.IndexToNode(from_index)
-        return (
-            4 * data["demands"][node] +
-            8 * data["demands2"][node]
-        )
+        return 4 * data["demands"][node] + 8 * data["demands2"][node]
 
     routing.AddDimensionWithVehicleCapacity(
         routing.RegisterUnaryTransitCallback(volume_callback),
@@ -163,7 +169,7 @@ def main():
     search_parameters.local_search_metaheuristic = (
         routing_enums_pb2.LocalSearchMetaheuristic.GUIDED_LOCAL_SEARCH
     )
-    search_parameters.time_limit.FromSeconds(1)
+    search_parameters.time_limit.FromSeconds(2)
 
     solution = routing.SolveWithParameters(search_parameters)
 

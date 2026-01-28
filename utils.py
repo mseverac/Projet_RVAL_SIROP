@@ -81,13 +81,18 @@ class Plant :
         
 
 def distance(a, b):
-    return ((a.x - b.x)+ (a.y - b.y))
+    return (abs(a.x - b.x)+ abs(a.y - b.y))
 
 
 class Tournee:
-    def __init__(self, home, list_arrets):
+    def __init__(self, home, list_arrets,end=None):
         self.home = home
         self.list_arrets = list_arrets
+
+        if end is None:
+            self.end = home
+        else:
+            self.end = end
 
     def is_valid(self):
         remplissage_camion = 0

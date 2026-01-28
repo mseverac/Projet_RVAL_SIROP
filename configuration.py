@@ -58,10 +58,10 @@ def plot_configuration():
 def plot_tournee(tournee : Tournee):
     home = tournee.home
     list_arrets = tournee.list_arrets
-    list_tournee= [[home,(0,0)]] + list_arrets + [[home,(0,0)]]
+    list_tournee= [[home,(0,0)]] + list_arrets + [[tournee.end,(0,0)]]
     stock_truck = (0,0)
 
-    plt.figure(figsize=(10,6))
+    plt.figure(figsize=(20,12))
     for plant in plants:
         plt.scatter(plant.x, plant.y, c='green', marker='x', s=50, label='Plant' if plant.id == 0 else "")
         plt.text(plant.x, plant.y, f"P{plant.id}", fontsize=12, ha='center', va='center', color='black')
@@ -97,7 +97,8 @@ def plot_tournee(tournee : Tournee):
         )
         print("list_tournee[i]:", list_tournee[i])
         stock_truck = sub_tuples(stock_truck,list_tournee[i][1])
-        plt.text((x0+x1)/2,(y0+y1)/2, f"stock={stock_truck}", fontsize=10, ha='center', va='center', color='black')
+        if stock_truck != (0,0):
+            plt.text((x0+x1)/2,(y0+y1)/2, f"stock={stock_truck}", fontsize=10, ha='center', va='center', color='black')
 
     
     plt.title("Tournee Visualization")
@@ -108,6 +109,63 @@ def plot_tournee(tournee : Tournee):
     plt.show()
 
 
+def plot_tournees(tournees : list):
+    plt.figure(figsize=(20,12))
 
+
+    for plant in plants:
+        plt.scatter(plant.x, plant.y, c='green', marker='x', s=50, label='Plant' if plant.id == 0 else "")
+        plt.text(plant.x, plant.y, f"P{plant.id}", fontsize=12, ha='center', va='center', color='black')
+
+    for warehouse in warehouses:
+        plt.scatter(warehouse.x, warehouse.y, c='blue', marker='x', s=50, label='Warehouse' if warehouse.id == 0 else "")
+        plt.text(warehouse.x, warehouse.y, f"W{warehouse.id}", fontsize=12, ha='center', va='center', color='black')
+        plt.text(warehouse.x, warehouse.y-0.2, f"S:{warehouse.current_stock}", fontsize=10, ha='center', va='center', color='black')
+
+    for shop in shops:
+        plt.scatter(shop.x, shop.y, c='red', marker='x', s=50, label='Shop' if shop.id == 0 else "")
+        plt.text(shop.x, shop.y, f"S{shop.id}", fontsize=12, ha='center', va='center', color='black')
+        plt.text(shop.x, shop.y-0.2, f"C:{shop.current_stock}", fontsize=10, ha='center', va='center', color='black')
+    
+    for i, tournee in enumerate(tournees):
+        home = tournee.home
+        list_arrets = tournee.list_arrets
+        list_tournee= [[home,(0,0)]] + list_arrets + [[tournee.end,(0,0)]]
+        stock_truck = (0,0)
+
+        
+        
+        for i in range(len(list_tournee) - 1):
+            x0 = list_tournee[i][0].x
+            y0 = list_tournee[i][0].y
+            x1 = list_tournee[i+1][0].x
+            y1 = list_tournee[i+1][0].y
+
+            dx = x1 - x0
+            dy = y1 - y0
+
+            plt.arrow(
+                x0, y0,
+                dx, dy,
+                length_includes_head=True,
+                head_width=0.1,
+                head_length=0.3,
+                fc='black',
+                ec='black',
+                alpha=0.6
+            )
+            print("list_tournee[i]:", list_tournee[i])
+            stock_truck = sub_tuples(stock_truck,list_tournee[i][1])
+            plt.text((x0+x1)/2,(y0+y1)/2, f"stock={stock_truck}", fontsize=10, ha='center', va='center', color='black')
+
+        
+    plt.title("Tournee Visualization")
+    plt.xlabel("X Coordinate")
+    plt.ylabel("Y Coordinate")
+    #plt.legend()
+    plt.grid()
+    plt.show()
+
+        
 
 
