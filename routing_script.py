@@ -151,7 +151,7 @@ def create_data_models():
         data_prime["demands"]  = [0,0,0,0] + demande1_prime
         data_prime["demands2"] = [0,0,0,0] + demande2_prime
 
-        data_prime["depots"] = [2, 3]
+        data_prime["depots"] = [0,1]
 
         data_prime["num_vehicles"] = N_MAX_VEHICLES
         data_prime["vehicle_volume_capacity"] = [200] * data_prime["num_vehicles"]
