@@ -12,7 +12,7 @@ V_heater10 = int(V_heater * 10)
 V_clim10 = 8
 V_heater10 = 4
 
-N_MAX_VEHICLES = 40
+N_MAX_VEHICLES = 80
 
 plant_positions = [(1,2),(6,5)]
 warehouse_positions = [(4,3),(9,4)]
@@ -99,16 +99,11 @@ def compute_demands(C0 : Configuration, C1 : Configuration):
         demande2.append(demand_p2)
     return demande1, demande2
 
-def create_data_models():
+def create_data_models(C0,C1,stock : bool):
 
     data = {}
 
-    C0 = configuration_initiale()
-
-    for w in C0.warehouses: 
-        w.current_stock = (100,100)
-
-    C1 = configuration_minimale("Mai", df)
+    
 
     demande1 , demande2 = compute_demands(C0, C1)
     demande1_prime = [0 for _ in range(len(demande1))] 
@@ -134,9 +129,48 @@ def create_data_models():
     data["demands"]  = [0,0,0,0] + demande1
     data["demands2"] = [0,0,0,0] + demande2
 
-    data["depots"] = [0,1]
+    data["depots"] = [0,1,2,3]
 
-    data["num_vehicles"] = N_MAX_VEHICLES
+
+
+    if stock:
+
+        configs = []
+        for i in range(4):
+            for j in range(4):
+                configs.append( (i,j) )
+
+
+        N = 10
+
+
+        data["start"] = []
+        data["end"]   = []
+
+        for idx, (start_config, end_config) in enumerate(configs):
+            data["start"] = data["start"] + [start_config]*N
+            data["end"]   = data["end"]   + [end_config]*N
+
+    else : 
+        configs = []
+        for i in range(2,4):
+            for j in range(4):
+                configs.append( (i,j) )
+
+
+        N = 10
+
+
+        data["start"] = []
+        data["end"]   = []
+
+        for idx, (start_config, end_config) in enumerate(configs):
+            data["start"] = data["start"] + [start_config]*N
+            data["end"]   = data["end"]   + [end_config]*N
+
+
+
+    data["num_vehicles"] = len(data["start"])
     data["vehicle_volume_capacity"] = [200] * data["num_vehicles"]
 
     print(data)
@@ -151,11 +185,48 @@ def create_data_models():
         data_prime["demands"]  = [0,0,0,0] + demande1_prime
         data_prime["demands2"] = [0,0,0,0] + demande2_prime
 
-        data_prime["depots"] = [0,1]
+        data_prime["depots"] = [0,1,2,3]
 
-        data_prime["num_vehicles"] = N_MAX_VEHICLES
+
+        if stock:
+
+            configs = []
+            for i in range(4):
+                for j in range(4):
+                    configs.append( (i,j) )
+
+
+            N = 10
+
+
+            data_prime["start"] = []
+            data_prime["end"]   = []
+
+            for idx, (start_config, end_config) in enumerate(configs):
+                data_prime["start"] = data_prime["start"] + [start_config]*N
+                data_prime["end"]   = data_prime["end"]   + [end_config]*N
+
+        else : 
+            configs = []
+            for i in range(2,4):
+                for j in range(4):
+                    configs.append( (i,j) )
+
+
+            N = 10
+
+
+            data_prime["start"] = []
+            data_prime["end"]   = []
+
+            for idx, (start_config, end_config) in enumerate(configs):
+                data_prime["start"] = data_prime["start"] + [start_config]*N
+                data_prime["end"]   = data_prime["end"]   + [end_config]*N
+
+
+
+        data_prime["num_vehicles"] = len(data_prime["start"])
         data_prime["vehicle_volume_capacity"] = [200] * data_prime["num_vehicles"]
-
         datas.append(data)
         datas.append(data_prime)
 
@@ -261,67 +332,87 @@ def create_tournees(data, manager, routing, solution, nodes):
 
 
 
-def main():
-    data = create_data_models()[0]
+def solve_and_create_tournees(C0, C1 ,month,stock : bool,plot = False):
+    datas = create_data_models(C0,C1, stock)
 
-    N = N_MAX_VEHICLES // 4
+    tournees = []
 
-    starts = [0]*N + [1]*N + [0]*N + [1]*N
-    ends   = [0]*N + [1]*N + [1]*N + [0]*N
+    for data in datas:
 
-    manager = pywrapcp.RoutingIndexManager(
-        len(data["distance_matrix"]),
-        data["num_vehicles"],
-        starts,
-        ends
-    )
+        manager = pywrapcp.RoutingIndexManager(
+            len(data["distance_matrix"]),
+            data["num_vehicles"],
+            data["start"],
+            data["end"]
+        )
 
-    routing = pywrapcp.RoutingModel(manager)
+        routing = pywrapcp.RoutingModel(manager)
 
-    def distance_callback(from_index, to_index):
-        return data["distance_matrix"][
-            manager.IndexToNode(from_index)
-        ][
-            manager.IndexToNode(to_index)
-        ]
+        def distance_callback(from_index, to_index):
+            return data["distance_matrix"][
+                manager.IndexToNode(from_index)
+            ][
+                manager.IndexToNode(to_index)
+            ]
 
-    routing.SetArcCostEvaluatorOfAllVehicles(
-        routing.RegisterTransitCallback(distance_callback)
-    )
+        routing.SetArcCostEvaluatorOfAllVehicles(
+            routing.RegisterTransitCallback(distance_callback)
+        )
 
-    def volume_callback(from_index):
-        node = manager.IndexToNode(from_index)
-        return V_clim10 * data["demands"][node] + V_heater10 * data["demands2"][node]
+        def volume_callback(from_index):
+            node = manager.IndexToNode(from_index)
+            return V_clim10 * data["demands"][node] + V_heater10 * data["demands2"][node]
 
-    routing.AddDimensionWithVehicleCapacity(
-        routing.RegisterUnaryTransitCallback(volume_callback),
-        0,
-        data["vehicle_volume_capacity"],
-        True,
-        "Volume"
-    )
-
+        routing.AddDimensionWithVehicleCapacity(
+            routing.RegisterUnaryTransitCallback(volume_callback),
+            0,
+            data["vehicle_volume_capacity"],
+            True,
+            "Volume"
+        )
 
 
-    search_parameters = pywrapcp.DefaultRoutingSearchParameters()
-    search_parameters.first_solution_strategy = (
-        routing_enums_pb2.FirstSolutionStrategy.PATH_CHEAPEST_ARC
-    )
-    search_parameters.local_search_metaheuristic = (
-        routing_enums_pb2.LocalSearchMetaheuristic.GUIDED_LOCAL_SEARCH
-    )
-    search_parameters.time_limit.FromSeconds(2)
 
-    solution = routing.SolveWithParameters(search_parameters)
+        search_parameters = pywrapcp.DefaultRoutingSearchParameters()
+        search_parameters.first_solution_strategy = (
+            routing_enums_pb2.FirstSolutionStrategy.PATH_CHEAPEST_ARC
+        )
+        search_parameters.local_search_metaheuristic = (
+            routing_enums_pb2.LocalSearchMetaheuristic.GUIDED_LOCAL_SEARCH
+        )
+        search_parameters.time_limit.FromSeconds(2)
 
-    print(solution)
+        solution = routing.SolveWithParameters(search_parameters)
 
-    if solution:
-        print_solution(data, manager, routing, solution)
-        tournees = create_tournees(data, manager, routing, solution,warehouses + plants + shops)
+        print(solution)
+
+        if solution:
+            print_solution(data, manager, routing, solution)
+            tournees1 = create_tournees(data, manager, routing, solution,warehouses + plants + shops)
+            tournees = tournees + tournees1
+
+
+    if plot :
+
         for t in tournees:
             plot_tournee(t)
         plot_tournees(tournees)
 
-if __name__ == "__main__":
-    main()
+    for t in tournees:
+        if t.home is Plant:
+            t.fin
+
+    return tournees
+
+
+
+C0 = configuration_initiale()
+
+for w in C0.warehouses: 
+    w.current_stock = (100,100)
+
+C1 = configuration_minimale("Mai", df)
+
+tournees = solve_and_create_tournees(C0, C1, "Mai",stock=True, plot=False)
+
+plot_tournees(tournees)

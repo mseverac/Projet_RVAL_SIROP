@@ -7,6 +7,8 @@ V_heater = 0.4 # m3
 V_clim = 0.8 # m3
 
 
+ratio_clim_heater = {'Janvier': 0.26 , 'Février' : 0.51 , 'Mars' : 0.7 , 'Avril' : 0.86 , 'Mai' : 0.97 , 'Juin' : 1 , 'Juillet' : 0.97 , 'Août' : 0.86 , 'Septembre': 0.72 , 'Octobre' : 0.52 , 'Novembre' : 0.26 , 'Décembre' : 0}
+
 def add_tuples(t1, t2):
     return (t1[0] + t2[0], t1[1] + t2[1])
 
@@ -84,49 +86,7 @@ def distance(a, b):
     return (abs(a.x - b.x)+ abs(a.y - b.y))
 
 
-class Tournee:
-    def __init__(self, home, list_arrets,end=None):
-        self.home = home
-        self.list_arrets = list_arrets
 
-        if end is None:
-            self.end = home
-        else:
-            self.end = end
-
-    def is_valid(self):
-        remplissage_camion = 0
-        for lieu, amount in self.list_arrets:
-            remplissage_camion += V_clim * amount[0] + V_heater * amount[1]
-            if remplissage_camion > TRUCK_CAPACITY:
-                return False
-            if not lieu.can_truck_stop(amount):
-                return False
-        return True
-
-    def effectuer_tournee(self):
-
-        remplissage_camion = 0
-        for lieu, amount in self.list_arrets:
-            lieu.truck_stop(amount)
-
-            remplissage_camion += V_clim * amount[0] + V_heater * amount[1]
-            if remplissage_camion > TRUCK_CAPACITY:
-                raise ValueError("Truck over capacity")
-            
-
-    def calculer_distance_totale(self):
-        total_distance = 0
-        current_location = self.home
-
-        for lieu, _ in self.list_arrets:
-            total_distance += distance(current_location, lieu)
-            current_location = lieu
-
-        total_distance += distance(current_location, self.home)
-
-        return total_distance
-            
 
 
 
@@ -170,6 +130,118 @@ class Configuration():
         #plt.legend()
         plt.grid()
         plt.show()
+
+
+def get_nearest_warehouse(x,y,config: Configuration):
+    min_dist = ma.inf
+    nearest_warehouse = None
+    for warehouse in config.warehouses:
+        dist = abs(warehouse.x - x) + abs(warehouse.y - y)
+        if dist < min_dist:
+            min_dist = dist
+            nearest_warehouse = warehouse
+    return nearest_warehouse
+
+
+def best_truck_load(month):
+    ratio = ratio_clim_heater[month]
+    load = (0,0)
+
+    while V_clim * load[0] + V_heater * load[1] < TRUCK_CAPACITY:
+        load = (load[0] + 1, load[1] + 1)
+        """print("load ration")
+        print(load[0] / (load[0] + load[1]))
+        print("desired ratio")
+        print(ratio)"""
+        if load[0] / (load[0] + load[1]) > ratio:
+            load = (load[0] -1, load[1])
+            #print("decrease heater")
+        elif load[0] / (load[0] + load[1]) < ratio:
+            load = (load[0] , load[1] - 1)
+
+            #print("decrease clim")
+
+
+    return load
+
+"""print("Best truck load for January :", best_truck_load('Janvier'))
+print("Best truck load for July :", best_truck_load('Juillet'))
+print("Best truck load for may :", best_truck_load('Mai'))
+print("Best truck load for septembre :", best_truck_load('Septembre'))"""
+
+
+class Tournee:
+    def __init__(self, home, list_arrets,end=None):
+        self.home = home
+        self.list_arrets = list_arrets
+
+        if end is None:
+            self.end = home
+        else:
+            self.end = end
+
+    def start_at_warehouse(self):
+        W = get_nearest_warehouse(self.home.x, self.home.y, CONFIG_PARFAITE)
+        self.home = W
+        total_load = self.get_total_load()
+        self.ajoute_arret((W, (-total_load[0], -total_load[1])),0)
+
+    def end_at_warehouse(self,month = None): 
+        W = get_nearest_warehouse(self.end.x, self.end.y, CONFIG_PARFAITE)
+        self.end = W
+        total_load = self.get_total_load()
+        if self.list_arrets[-1][0] is Plant:
+            load_clim,load_heater = best_truck_load(month)
+            self.ajoute_arret((W, (load_clim, load_heater)),-1)
+
+
+
+    def get_total_load(self):
+        total_load = (0,0)
+        for lieu, amount in self.list_arrets:
+            total_load = add_tuples(total_load, amount)
+        return total_load
+
+    def ajoute_arret(self,arret,i=0):
+        if i == -1:
+            self.list_arrets.append(arret)
+        else:
+            self.list_arrets.insert(i,arret)
+
+
+    def is_valid(self):
+        remplissage_camion = 0
+        for lieu, amount in self.list_arrets:
+            remplissage_camion += V_clim * amount[0] + V_heater * amount[1]
+            if remplissage_camion > TRUCK_CAPACITY:
+                return False
+            if not lieu.can_truck_stop(amount):
+                return False
+        return True
+
+    def effectuer_tournee(self):
+
+        remplissage_camion = 0
+        for lieu, amount in self.list_arrets:
+            lieu.truck_stop(amount)
+
+            remplissage_camion += V_clim * amount[0] + V_heater * amount[1]
+            if remplissage_camion > TRUCK_CAPACITY:
+                raise ValueError("Truck over capacity")
+            
+
+    def calculer_distance_totale(self):
+        total_distance = 0
+        current_location = self.home
+
+        for lieu, _ in self.list_arrets:
+            total_distance += distance(current_location, lieu)
+            current_location = lieu
+
+        total_distance += distance(current_location, self.home)
+
+        return total_distance
+            
 
 
 def configuration_initiale():
