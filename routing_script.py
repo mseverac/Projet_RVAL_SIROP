@@ -2,6 +2,7 @@ from utils import *
 from espérence_perte import *
 from configuration import *
 
+import copy as cp
 from ortools.constraint_solver import routing_enums_pb2
 from ortools.constraint_solver import pywrapcp
 import matplotlib.pyplot as plt
@@ -99,6 +100,26 @@ def compute_demands(C0 : Configuration, C1 : Configuration):
         demande2.append(demand_p2)
     return demande1, demande2
 
+
+def supr_shops_with_no_demand(data):
+    new_demands = []
+    new_demands2 = []
+    new_start = []
+    new_end = []
+    ids_removed = []
+    for i, (d1, d2) in enumerate(zip(data["demands"], data["demands2"])):
+        if d1 == 0 and d2 == 0:
+            continue
+        else:
+            new_demands.append(d1)
+            new_demands2.append(d2)
+            new_start.append(data["start"][i])
+            new_end.append(data["end"][i])
+    data["demands"] = new_demands
+    data["demands2"] = new_demands2
+    data["start"] = new_start
+    data["end"] = new_end
+
 def create_data_models(C0,C1,stock : bool):
 
     data = {}
@@ -173,7 +194,7 @@ def create_data_models(C0,C1,stock : bool):
     data["num_vehicles"] = len(data["start"])
     data["vehicle_volume_capacity"] = [200] * data["num_vehicles"]
 
-    print(data)
+    #print(data)
 
     if double_demand:
         datas = []
@@ -230,9 +251,12 @@ def create_data_models(C0,C1,stock : bool):
         datas.append(data)
         datas.append(data_prime)
 
-        return datas
     else:
-        return [data]
+        datas =  [data]
+
+    
+
+    return datas
 
 
 
@@ -371,6 +395,12 @@ def solve_and_create_tournees(C0, C1 ,month,stock : bool,plot = False):
             "Volume"
         )
 
+        for node in range(len(data["distance_matrix"])):
+            if node not in data["start"] and node not in data["end"]:
+                if data["demands"][node] == 0 and data["demands2"][node] == 0:
+                    routing.AddDisjunction([manager.NodeToIndex(node)], 0)
+
+
 
 
         search_parameters = pywrapcp.DefaultRoutingSearchParameters()
@@ -384,11 +414,15 @@ def solve_and_create_tournees(C0, C1 ,month,stock : bool,plot = False):
 
         solution = routing.SolveWithParameters(search_parameters)
 
-        print(solution)
+        #print(solution)
 
         if solution:
-            print_solution(data, manager, routing, solution)
+            warehouses = C0.warehouses 
+            plants = C0.plants
+            shops = C0.shops
+            #print_solution(data, manager, routing, solution)
             tournees1 = create_tournees(data, manager, routing, solution,warehouses + plants + shops)
+            #plot_tournees(tournees1)
             tournees = tournees + tournees1
 
 
@@ -397,22 +431,75 @@ def solve_and_create_tournees(C0, C1 ,month,stock : bool,plot = False):
         for t in tournees:
             plot_tournee(t)
         plot_tournees(tournees)
+        
+
+    #print(f"Total number of tournees: {len(tournees)}")
 
     for t in tournees:
-        if t.home is Plant:
-            t.fin
+        #print(f"tourne home before : {t.home}")
+        if isinstance(t.home, Plant):
+            t.start_at_warehouse(C0)
+            #print(f"tourne home after : {t.home}")
+        if isinstance(t.end, Plant):
+            #plot_tournee(t)
+            t.end_at_warehouse(C0, month) 
+            #print(f"tourne end after : {t.end}")
+            #plot_tournee(t)
+
+
 
     return tournees
+
+
+
+
+
+def find_livraisons(C0,month):
+
+    C1 = configuration_minimale(month, df)
+
+
+    C0p = cp.deepcopy(C0)
+
+    try :
+        tournees = solve_and_create_tournees(C0p, C1, month,stock=True, plot=False)
+        for t in tournees:
+            t.effectuer_tournee()
+
+    except :
+        print("Pas assez de stock. Passage par les Plants")
+        tournees = solve_and_create_tournees(C0p, C1, month,stock=False, plot=False)
+        for t in tournees:
+
+            t.effectuer_tournee()
+
+    """C0.plot()
+    C1.plot()"""
+    #plot_tournees(tournees)
+
+    for t in tournees:
+        a=1
+        
+        #plot_tournee(t)
+
+
+
+    
+
+    #C0p.plot()
+    #print(total_dist(tournees))
+
+    return C0p,total_dist(tournees)
 
 
 
 C0 = configuration_initiale()
 
 for w in C0.warehouses: 
-    w.current_stock = (100,100)
+    w.current_stock = (0,0)
 
-C1 = configuration_minimale("Mai", df)
 
-tournees = solve_and_create_tournees(C0, C1, "Mai",stock=True, plot=False)
+C_after, dist = find_livraisons(C0,"Mai")
 
-plot_tournees(tournees)
+
+C_after.plot()

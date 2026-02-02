@@ -103,7 +103,7 @@ def plot_tournee(tournee : Tournee):
             ec='black',
             alpha=0.6
         )
-        print("list_tournee[i]:", list_tournee[i])
+        #print("list_tournee[i]:", list_tournee[i])
         stock_truck = sub_tuples(stock_truck,list_tournee[i][1])
         if stock_truck != (0,0):
             plt.text((x0+x1)/2,(y0+y1)/2, f"stock={stock_truck}", fontsize=10, ha='center', va='center', color='black')
@@ -139,7 +139,6 @@ def plot_tournees(tournees: list):
 
     # --- tournées ---
     for t_idx, tournee in enumerate(tournees):
-        print(t_idx)
         color = cmap(t_idx)
 
         list_tournee = (

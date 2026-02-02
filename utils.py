@@ -6,7 +6,7 @@ WAREHOUSE_CAPACITY = 650 # items for each product
 V_heater = 0.4 # m3
 V_clim = 0.8 # m3
 
-
+months = {1:'Janvier', 2:'Février', 3:'Mars', 4:'Avril', 5:'Mai', 6:'Juin', 7:'Juillet', 8:'Août', 9:'Septembre', 10:'Octobre', 11:'Novembre', 12:'Décembre'}
 ratio_clim_heater = {'Janvier': 0.26 , 'Février' : 0.51 , 'Mars' : 0.7 , 'Avril' : 0.86 , 'Mai' : 0.97 , 'Juin' : 1 , 'Juillet' : 0.97 , 'Août' : 0.86 , 'Septembre': 0.72 , 'Octobre' : 0.52 , 'Novembre' : 0.26 , 'Décembre' : 0}
 
 def add_tuples(t1, t2):
@@ -22,6 +22,9 @@ class Shop :
         self.y = y
         self.capacity = (capacity, capacity)
         self.current_stock = (0,0)
+
+    def __str__(self):
+        return f"Shop {self.id} at position ({self.x},{self.y}) with capacity {self.capacity} and current stock {self.current_stock}"
 
     def can_truck_stop(self, amount_delivered): 
         if add_tuples(amount_delivered, self.current_stock) >= (0,0) and add_tuples(amount_delivered, self.current_stock) <= self.capacity:
@@ -44,6 +47,9 @@ class Warehouse :
         self.x = x
         self.y = y
         self.current_stock = (0,0)
+
+    def __str__(self):
+        return f"Warehouse {self.id} at position ({self.x},{self.y}) with stock {self.current_stock}"
 
 
 
@@ -70,6 +76,9 @@ class Plant :
         self.id = id
         self.x = x
         self.y = y
+
+    def __str__(self):
+        return f"Plant {self.id} at position ({self.x},{self.y})"
 
     def truck_stop(self, amount_delivered):
         if amount_delivered > (0,0):
@@ -180,26 +189,53 @@ class Tournee:
         else:
             self.end = end
 
-    def start_at_warehouse(self):
-        W = get_nearest_warehouse(self.home.x, self.home.y, CONFIG_PARFAITE)
-        self.home = W
-        total_load = self.get_total_load()
-        self.ajoute_arret((W, (-total_load[0], -total_load[1])),0)
 
-    def end_at_warehouse(self,month = None): 
-        W = get_nearest_warehouse(self.end.x, self.end.y, CONFIG_PARFAITE)
+    def __str__(self):
+        tournee_str = f"Tournee starting at {self.home}:\n"
+        load = 0,0
+        for lieu, amount in self.list_arrets:
+            tournee_str += f"  Stop at {lieu} with delivery {amount}\n"
+            load = sub_tuples(load, amount)
+            tournee_str += f"load camion : {load}\n"
+        tournee_str += f"Ending at {self.end}"
+        return tournee_str
+    
+
+    def add_take_load(self, lieu):
+        load = (0,0)
+        for l, amount in self.list_arrets:
+            load = sub_tuples(load, amount)
+
+        #print(f"Current load before taking from {lieu}: {load}")
+        if load != (0,0):
+            self.ajoute_arret((lieu, load),0)
+
+    def start_at_warehouse(self,config: Configuration):
+        W = get_nearest_warehouse(self.home.x, self.home.y, config)
+        if not isinstance(self.home, Plant):
+            print("Warning: start_at_warehouse called but home is not a Plant")
+
+        self.home = W
+
+    def end_at_warehouse(self,config: Configuration, month = None): 
+        if isinstance(self.end, Plant):
+            load_clim,load_heater = best_truck_load(month)
+            self.ajoute_arret((self.end, (-load_clim, -load_heater)),-1)
+
+
+        W = get_nearest_warehouse(self.end.x, self.end.y, config)
         self.end = W
         total_load = self.get_total_load()
-        if self.list_arrets[-1][0] is Plant:
-            load_clim,load_heater = best_truck_load(month)
-            self.ajoute_arret((W, (load_clim, load_heater)),-1)
+
+        self.ajoute_arret((W, total_load),-1)
+        print(f"End at warehouse {W.id} with load {total_load}")
 
 
 
     def get_total_load(self):
         total_load = (0,0)
         for lieu, amount in self.list_arrets:
-            total_load = add_tuples(total_load, amount)
+            total_load = sub_tuples(total_load, amount)
         return total_load
 
     def ajoute_arret(self,arret,i=0):
@@ -293,6 +329,13 @@ def config_dist_to_parfaite(config: Configuration):
         total_distance += (diff_stock[0])**2 + (diff_stock[1])**2
 
     return ma.sqrt(total_distance)
+
+
+def total_dist(list_tournee : list):
+    total_distance = 0
+    for t in list_tournee:
+        total_distance += t.calculer_distance_totale()
+    return total_distance
 
 
 
