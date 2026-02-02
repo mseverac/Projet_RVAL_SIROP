@@ -1,5 +1,9 @@
 import matplotlib.pyplot as plt
 import math as ma
+import pandas as pd
+from scipy.stats import norm
+
+
 TRUCK_CAPACITY = 20 # m3
 WAREHOUSE_CAPACITY = 650 # items for each product
 
@@ -149,35 +153,101 @@ def get_nearest_warehouse(x,y,config: Configuration):
         if dist < min_dist:
             min_dist = dist
             nearest_warehouse = warehouse
+    if x == config.plants[0].x and y == config.plants[0].y:
+        nearest_warehouse = config.warehouses[1]
+    
     return nearest_warehouse
 
 
-def best_truck_load(month):
+def best_truck_load(month, max_V=TRUCK_CAPACITY):
+    """Truck capacity en m3"""
+
+    print(f"max_v before int: {max_V}")
+
+    max_V = int(round(max_V * 10))
+    print(f"max_v after int: {max_V}")
+    V_clim = 8
+    V_heater = 4
+    
     ratio = ratio_clim_heater[month]
-    load = (0,0)
 
-    while V_clim * load[0] + V_heater * load[1] < TRUCK_CAPACITY:
-        load = (load[0] + 1, load[1] + 1)
-        """print("load ration")
-        print(load[0] / (load[0] + load[1]))
-        print("desired ratio")
-        print(ratio)"""
-        if load[0] / (load[0] + load[1]) > ratio:
-            load = (load[0] -1, load[1])
-            #print("decrease heater")
-        elif load[0] / (load[0] + load[1]) < ratio:
-            load = (load[0] , load[1] - 1)
+    best_load = (0, 0)
+    best_error = float("inf")
+    best_volume = 0
 
-            #print("decrease clim")
+    # On parcourt toutes les quantités possibles de clim
+    max_clim = max_V // V_clim
+
+    for n_clim in range(int(max_clim + 1)):
+
+        # Volume restant pour les heaters
+        remaining = max_V - n_clim * V_clim
 
 
-    return load
+        n_heater = remaining // V_heater
+
+
+        total = n_clim + n_heater
+        if total == 0:
+            continue
+
+        current_ratio = n_clim / total
+        error = abs(current_ratio - ratio)
+
+        volume = n_clim * V_clim + n_heater * V_heater
+
+        # On choisit la solution :
+        # - d'abord par erreur de ratio minimale
+        # - en cas d'égalité, par volume maximal
+        if error < best_error or (error == best_error and volume > best_volume):
+            best_error = error
+            best_volume = volume
+            best_load = (int(n_clim), int(n_heater))
+
+    return best_load
+
+
 
 """print("Best truck load for January :", best_truck_load('Janvier'))
 print("Best truck load for July :", best_truck_load('Juillet'))
 print("Best truck load for may :", best_truck_load('Mai'))
 print("Best truck load for septembre :", best_truck_load('Septembre'))"""
+df = pd.read_excel("sales_month.xlsx")
 
+def esperance_pertes(shop_id, product, stock, current_month,df):
+    """shop id : int de 1 à 20
+       product : "P1" ou "P2"
+       """
+    col = f"S{shop_id}_{product}"
+    mu = df.loc[df["Month"] == current_month, col].values[0]
+
+    if mu == 0:
+        return 0
+    else : 
+        sigma = 0.1*mu
+
+    Z = (stock - mu) / sigma
+    pertes = sigma * norm.pdf(Z) + (mu - stock) * (1 - norm.cdf(Z))
+
+    return pertes
+
+
+def ajoute_produit_au_meilleur(shops, product,month):
+    max_perte_reduction = 0
+    best_shop = None
+    i_best_shop = None
+    for i, shop in enumerate(shops):
+        current_stock = shop.current_stock[0] if product == "P1" else shop.current_stock[1]
+        if current_stock >= shop.capacity[0] if product == "P1" else shop.capacity[1]:
+            continue
+        current_pertes = esperance_pertes(shop.id+1, product, current_stock, month, df)
+        new_pertes = esperance_pertes(shop.id+1, product, current_stock + 1, month, df)
+        perte_reduction = current_pertes - new_pertes
+        if perte_reduction > max_perte_reduction:
+            max_perte_reduction = perte_reduction
+            best_shop = shop
+            i_best_shop = i
+    return best_shop, i_best_shop
 
 class Tournee:
     def __init__(self, home, list_arrets,end=None):
@@ -188,6 +258,105 @@ class Tournee:
             self.end = home
         else:
             self.end = end
+
+    def take_max_load_at(self, lieu,id, month):
+        #print(" ")
+        #print(f"Taking max load at {lieu} for stop id {id}")
+        #print(f"tournee before taking load: {self}")
+        #print(" ")
+        current_amount = (0,0)
+        current_volume = 0
+        for i, (l, amount) in enumerate(self.list_arrets):
+            current_amount = sub_tuples(current_amount, amount)
+            current_volume = V_clim * current_amount[0] + V_heater * current_amount[1]
+            #print("-------")
+            #print(f"At stop {i} : {l} with amount {amount}, current volume {current_volume}")
+            if l == lieu and i == id :
+                if isinstance(lieu, Plant) :
+                    load = best_truck_load(month, TRUCK_CAPACITY - current_volume)
+                    #print(f"Taking load {load} at Plant")
+                    load_clim, load_heater = load
+                    self.list_arrets[i] = (l, add_tuples(amount, (-load_clim, -load_heater)))
+                elif isinstance(lieu, Warehouse) :
+                    available_clim, available_heater = lieu.get_stock()
+                    load_clim1, load_heater1 = best_truck_load(month, TRUCK_CAPACITY - current_volume)
+                    load_clim = min(load_clim1, available_clim)
+                    load_heater = min(load_heater1, available_heater)
+
+                    if load_clim1 < load_clim :
+                        V = load_clim * V_clim + load_heater * V_heater
+                        while V <= TRUCK_CAPACITY - current_volume :
+                            load_heater += 1
+                            V = load_clim * V_clim + load_heater * V_heater
+                        load_heater -= 1
+                    if load_heater1 < load_heater :
+                        V = load_clim * V_clim + load_heater * V_heater
+                        while V <= TRUCK_CAPACITY - current_volume :
+                            load_clim += 1
+                            V = load_clim * V_clim + load_heater * V_heater
+                        load_clim -= 1
+                    self.list_arrets[i] = (l, add_tuples(amount, (-load_clim, -load_heater)))
+
+
+        return i, load_clim, load_heater
+        
+
+    def repartir_load_among_shops(self,load_clim,load_heater, shops_ids, month):
+        shops = [shops_ids[i][0] for i in range(len(shops_ids))]
+
+        #for P1
+        while load_clim > 0:
+            best_shop, i_best_shop = ajoute_produit_au_meilleur(shops, "P1", month)
+            if best_shop is None:
+                print("No shop needs more clim")
+                break
+            else:
+                self.list_arrets[shops_ids[i_best_shop][1]] = (best_shop, add_tuples(self.list_arrets[shops_ids[i_best_shop][1]][1], (1,0)))
+                load_clim -= 1
+        #for P2
+        while load_heater > 0:
+            best_shop, i_best_shop = ajoute_produit_au_meilleur(shops, "P2", month)
+            if best_shop is None:
+                print("No shop needs more heater")
+                break
+            else:
+                self.list_arrets[shops_ids[i_best_shop][1]] = (best_shop, add_tuples(self.list_arrets[shops_ids[i_best_shop][1]][1], (0,1)))
+                load_heater -= 1
+
+        return load_clim, load_heater
+
+
+
+    def optimiser(self, config: Configuration, month):
+        current_amount = (0,0)
+        current_volume = 0
+        load_clim = 0
+        load_heater = 0
+        shops = []
+        for id_stop, (lieu, amount) in enumerate(self.list_arrets):
+            """print(" ")
+            print(f"At stop {id_stop} : {lieu} with amount {amount}")
+            print(" ")"""
+            current_amount = sub_tuples(current_amount, amount)
+            current_volume = V_clim * current_amount[0] + V_heater * current_amount[1]
+            if isinstance(lieu, Plant) or isinstance(lieu, Warehouse):
+                load_clim, load_heater = self.repartir_load_among_shops(load_clim, load_heater, shops, month)
+                shops = []
+                _,i_load_clim, i_load_heater = self.take_max_load_at(lieu,id_stop, month)
+                load_clim += i_load_clim
+                load_heater += i_load_heater
+            elif isinstance(lieu, Shop) and (load_clim > 0 or load_heater > 0):
+                shops.append((lieu, id_stop))
+        load_clim, load_heater = self.repartir_load_among_shops(load_clim, load_heater, shops, month)
+
+        if load_clim > 0 or load_heater > 0:
+
+            print(f"After optimisation, remaining load : clim {load_clim}, heater {load_heater}")
+                
+
+
+
+
 
 
     def __str__(self):

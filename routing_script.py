@@ -1,10 +1,11 @@
 from utils import *
-from espérence_perte import *
+from esperance_perte import *
 from configuration import *
 
 import copy as cp
 from ortools.constraint_solver import routing_enums_pb2
 from ortools.constraint_solver import pywrapcp
+
 import matplotlib.pyplot as plt
 
 """V_clim10 = int(V_clim * 10)
@@ -446,11 +447,16 @@ def solve_and_create_tournees(C0, C1 ,month,stock : bool,plot = False):
             #print(f"tourne end after : {t.end}")
             #plot_tournee(t)
 
+    
+
 
 
     return tournees
 
 
+def optimise_tournees(C, month, list_tournees):
+    for t in list_tournees:
+        t.optimiser_tournee(C, month)
 
 
 
@@ -473,21 +479,22 @@ def find_livraisons(C0,month):
 
             t.effectuer_tournee()
 
-    """C0.plot()
-    C1.plot()"""
-    #plot_tournees(tournees)
 
     for t in tournees:
-        a=1
-        
-        #plot_tournee(t)
+        plot_tournee(t)
+        t.optimiser(C0p, month)
+        plot_tournee(t)
+
+
+    """C0p2 = cp.deepcopy(C0)
+
+    for t in tournees:
+        t.effectuer_tournee()"""
 
 
 
-    
 
-    #C0p.plot()
-    #print(total_dist(tournees))
+
 
     return C0p,total_dist(tournees)
 

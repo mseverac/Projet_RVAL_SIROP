@@ -7,6 +7,9 @@ from utils import *
 df = pd.read_excel("sales_month.xlsx")
 
 def esperance_pertes(shop_id, product, stock, current_month,df):
+    """shop id : int de 1 à 20
+       product : "P1" ou "P2"
+       """
     col = f"S{shop_id}_{product}"
     mu = df.loc[df["Month"] == current_month, col].values[0]
 
