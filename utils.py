@@ -28,6 +28,10 @@ class Shop :
         self.capacity = (capacity, capacity)
         self.current_stock = (0,0)
 
+
+    def get_free_space(self):
+        return sub_tuples(self.capacity,self.current_stock)
+
     def __str__(self):
         return f"Shop {self.id} at position ({self.x},{self.y}) with capacity {self.capacity} and current stock {self.current_stock}"
 
@@ -262,18 +266,40 @@ def ajoute_produit_au_meilleur(shops, product,month):
             i_best_shop = i
     return best_shop, i_best_shop
 
+def repartir_among_free_spaces(load, fs: list):
+    n = len(fs)
+    repartition = [0] * n
 
-def find_lieu(x,y,config: Configuration):
-    for plant in config.plants:
-        if plant.x == x and plant.y == y:
-            return plant
-    for warehouse in config.warehouses:
-        if warehouse.x == x and warehouse.y == y:
-            return warehouse
-    for shop in config.shops:
-        if shop.x == x and shop.y == y:
-            return shop
-    return None
+    if n == 0:
+        return repartition, load
+
+    total_capacity = sum(fs)
+
+    # Si le load dépasse la capacité totale
+    if load >= total_capacity:
+        return fs.copy(), load - total_capacity
+
+    remaining = load
+
+    # Tant qu'il reste quelque chose à distribuer
+    while remaining > 0:
+        distributed = False
+
+        for i in range(n):
+            if remaining == 0:
+                break
+
+            if repartition[i] < fs[i]:
+                repartition[i] += 1
+                remaining -= 1
+                distributed = True
+
+        # Si on n'a rien pu distribuer → tout est saturé
+        if not distributed:
+            break
+
+    return repartition, remaining
+
 
 class Tournee:
     def __init__(self, home, list_arrets,end=None):
@@ -352,12 +378,51 @@ class Tournee:
         return i, load_clim, load_heater
         
 
-    def repartir_load_among_shops(self,load_clim,load_heater, shops_ids, month):
-        shops = [shops_ids[i][0] for i in range(len(shops_ids))]
-        cp_shops = cp.deepcopy(shops)
+    def repartir_load_among_shops(self,load_clim,load_heater, shops, month):
+
+        print("----------")
+        print("algo repartiontio")
+        print("----------")
+        print("loads")
+        print(load_clim)
+
+        print(load_heater)
+
+        print("----------")
+
+        print(self)
+        print("----------")
+
+        print(shops)
+
+        free_spaces = [s.get_free_space() for s,_ in shops]
+        print("----------")
+        print(free_spaces)
 
 
-        #for P1
+
+        free_space_clim = [fs[0] for fs in free_spaces]
+
+        free_space_heater = [fs[1] for fs in free_spaces]
+
+        repart_clim,remaing_clim = repartir_among_free_spaces(load_clim,free_space_clim)
+        repart_heater,remaining_heater = repartir_among_free_spaces(load_heater,free_space_heater)
+        print("----------")
+        print(f"repart clim : {repart_clim}")
+        print(f"repart heater : {repart_heater}")
+        if load_clim == 0 and load_heater == 0 :
+
+            return (remaing_clim,remaining_heater)
+        else :
+            raise("Pause")
+
+
+
+
+
+
+
+        """#for P1
         while load_clim > 0:
             best_shop, i_best_shop = ajoute_produit_au_meilleur(cp_shops, "P1", month)
             if best_shop is None:
@@ -381,7 +446,7 @@ class Tournee:
                 self.list_arrets[shops_ids[i_best_shop][1]] = (best_shop, add_tuples(self.list_arrets[shops_ids[i_best_shop][1]][1], (0,1)))
                 load_heater -= 1
 
-        return load_clim, load_heater
+        return load_clim, load_heater"""
 
 
 
