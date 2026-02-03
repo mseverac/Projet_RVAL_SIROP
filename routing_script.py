@@ -121,7 +121,7 @@ def supr_shops_with_no_demand(data):
     data["start"] = new_start
     data["end"] = new_end
 
-def create_data_models(C0,C1,stock : bool):
+def create_data_models(C0,C1,stock : int):
 
     data = {}
 
