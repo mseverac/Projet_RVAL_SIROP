@@ -481,9 +481,9 @@ def find_livraisons(C0,month):
 
 
     for t in tournees:
-        plot_tournee(t)
+        #plot_tournee(t)
         t.optimiser(C0p, month)
-        plot_tournee(t)
+        #plot_tournee(t)
 
 
     """C0p2 = cp.deepcopy(C0)
