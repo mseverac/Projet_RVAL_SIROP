@@ -63,7 +63,7 @@ def plot_configuration():
 
 #plot_configuration()
 
-def plot_tournee(tournee : Tournee):
+def plot_tournee(tournee : Tournee,name=None):
     home = tournee.home
     list_arrets = tournee.list_arrets
     list_tournee= [[home,(0,0)]] + list_arrets + [[tournee.end,(0,0)]]
@@ -77,12 +77,12 @@ def plot_tournee(tournee : Tournee):
     for warehouse in warehouses:
         plt.scatter(warehouse.x, warehouse.y, c='blue', marker='x', s=50, label='Warehouse' if warehouse.id == 0 else "")
         plt.text(warehouse.x, warehouse.y, f"W{warehouse.id}", fontsize=12, ha='center', va='center', color='black')
-        plt.text(warehouse.x, warehouse.y-0.2, f"S:{warehouse.current_stock}", fontsize=10, ha='center', va='center', color='black')
+        #plt.text(warehouse.x, warehouse.y-0.2, f"S:{warehouse.current_stock}", fontsize=10, ha='center', va='center', color='black')
 
     for shop in shops:
         plt.scatter(shop.x, shop.y, c='red', marker='x', s=50, label='Shop' if shop.id == 0 else "")
         plt.text(shop.x, shop.y, f"S{shop.id}", fontsize=12, ha='center', va='center', color='black')
-        plt.text(shop.x, shop.y-0.2, f"C:{shop.current_stock}", fontsize=10, ha='center', va='center', color='black')
+        #plt.text(shop.x, shop.y-0.2, f"C:{shop.current_stock}", fontsize=10, ha='center', va='center', color='black')
     
     for i in range(len(list_tournee) - 1):
         x0 = list_tournee[i][0].x
@@ -114,7 +114,11 @@ def plot_tournee(tournee : Tournee):
     plt.ylabel("Y Coordinate")
     plt.legend()
     plt.grid()
-    plt.show()
+    if name is None :
+        plt.show()
+    else :
+        plt.savefig(name)
+        plt.close()
 
 def plot_tournees(tournees: list):
     plt.figure(figsize=(30,18))

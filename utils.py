@@ -79,6 +79,8 @@ class Warehouse :
             self.current_stock = add_tuples(amount_delivered, self.current_stock)
             return amount_delivered
         else:
+            print(f"self : {self}")
+            print(f"delivery : {amount_delivered}")
             raise ValueError(f"Wrong stock after delivery : {add_tuples(self.current_stock, amount_delivered)}")
             return 0
         
@@ -152,6 +154,7 @@ class Configuration():
         plt.grid()
         if path is not None:
             plt.savefig(path)
+            plt.close()
         else :
             plt.show()
 
@@ -301,6 +304,19 @@ def repartir_among_free_spaces(load, fs: list):
     return repartition, remaining
 
 
+def find_lieu(x,y,config: Configuration):
+    for plant in config.plants:
+        if plant.x == x and plant.y == y:
+            return plant
+    for warehouse in config.warehouses:
+        if warehouse.x == x and warehouse.y == y:
+            return warehouse
+    for shop in config.shops:
+        if shop.x == x and shop.y == y:
+            return shop
+    return None
+
+
 class Tournee:
     def __init__(self, home, list_arrets,end=None):
         self.home = home
@@ -410,11 +426,9 @@ class Tournee:
         print("----------")
         print(f"repart clim : {repart_clim}")
         print(f"repart heater : {repart_heater}")
-        if load_clim == 0 and load_heater == 0 :
 
-            return (remaing_clim,remaining_heater)
-        else :
-            raise("Pause")
+        return (remaing_clim,remaining_heater)
+        
 
 
 
