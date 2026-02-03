@@ -176,10 +176,8 @@ def get_nearest_warehouse(x,y,config: Configuration):
 def best_truck_load(month, max_V=TRUCK_CAPACITY):
     """Truck capacity en m3"""
 
-    #print(f"max_v before int: {max_V}")
 
     max_V = int(round(max_V * 10))
-    #print(f"max_v after int: {max_V}")
     V_clim = 8
     V_heater = 4
     
@@ -221,11 +219,6 @@ def best_truck_load(month, max_V=TRUCK_CAPACITY):
     return best_load
 
 
-
-"""print("Best truck load for January :", best_truck_load('Janvier'))
-print("Best truck load for July :", best_truck_load('Juillet'))
-print("Best truck load for may :", best_truck_load('Mai'))
-print("Best truck load for septembre :", best_truck_load('Septembre'))"""
 df = pd.read_excel("sales_month.xlsx")
 
 def esperance_pertes(shop_id, product, stock, current_month,df):
@@ -396,24 +389,10 @@ class Tournee:
 
     def repartir_load_among_shops(self,load_clim,load_heater, shops, month):
 
-        print("----------")
-        print("algo repartiontio")
-        print("----------")
-        print("loads")
-        print(load_clim)
-
-        print(load_heater)
-
-        print("----------")
-
-        print(self)
-        print("----------")
-
-        print(shops)
+        
 
         free_spaces = [s.get_free_space() for s,_ in shops]
-        print("----------")
-        print(free_spaces)
+        
 
 
 
@@ -423,44 +402,11 @@ class Tournee:
 
         repart_clim,remaing_clim = repartir_among_free_spaces(load_clim,free_space_clim)
         repart_heater,remaining_heater = repartir_among_free_spaces(load_heater,free_space_heater)
-        print("----------")
-        print(f"repart clim : {repart_clim}")
-        print(f"repart heater : {repart_heater}")
+        
 
         return (remaing_clim,remaining_heater)
         
 
-
-
-
-
-
-
-        """#for P1
-        while load_clim > 0:
-            best_shop, i_best_shop = ajoute_produit_au_meilleur(cp_shops, "P1", month)
-            if best_shop is None:
-                print("No shop needs more clim")
-                break
-            else:
-                best_shop.current_stock = (best_shop.current_stock[0]+1, best_shop.current_stock[1])
-
-                self.list_arrets[shops_ids[i_best_shop][1]] = (best_shop, add_tuples(self.list_arrets[shops_ids[i_best_shop][1]][1], (1,0)))
-                load_clim -= 1
-        #for P2
-        while load_heater > 0:
-
-            best_shop, i_best_shop = ajoute_produit_au_meilleur(cp_shops, "P2", month)
-            if best_shop is None:
-                print("No shop needs more heater")
-                break
-            else:
-                best_shop.current_stock = (best_shop.current_stock[0]+1, best_shop.current_stock[1])
-
-                self.list_arrets[shops_ids[i_best_shop][1]] = (best_shop, add_tuples(self.list_arrets[shops_ids[i_best_shop][1]][1], (0,1)))
-                load_heater -= 1
-
-        return load_clim, load_heater"""
 
 
 
@@ -471,9 +417,7 @@ class Tournee:
         load_heater = 0
         shops = []
         for id_stop, (lieu, amount) in enumerate(self.list_arrets):
-            """print(" ")
-            print(f"At stop {id_stop} : {lieu} with amount {amount}")
-            print(" ")"""
+            
             current_amount = sub_tuples(current_amount, amount)
             current_volume = V_clim * current_amount[0] + V_heater * current_amount[1]
             if isinstance(lieu, Plant) or isinstance(lieu, Warehouse):
@@ -486,11 +430,11 @@ class Tournee:
                 shops.append((lieu, id_stop))
         load_clim, load_heater = self.repartir_load_among_shops(load_clim, load_heater, shops, month)
 
-        if load_clim > 0 or load_heater > 0:
+        """if load_clim > 0 or load_heater > 0:
 
             print(f"After optimisation, remaining load : clim {load_clim}, heater {load_heater}")
                 
-
+"""
 
 
 
@@ -534,7 +478,7 @@ class Tournee:
         total_load = self.get_total_load()
 
         self.ajoute_arret((W, total_load),-1)
-        print(f"End at warehouse {W.id} with load {total_load}")
+        #print(f"End at warehouse {W.id} with load {total_load}")
 
 
 

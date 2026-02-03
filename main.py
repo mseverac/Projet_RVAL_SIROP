@@ -11,6 +11,8 @@ debut = date(2024, 1, 1)
 
 for i in range(365):
     jour = debut + timedelta(days=i)
+    print("Calcul pour le jour : ",jour)
+
     month = months[jour.month]
     
     C_after, dist, tournees_opt = find_livraisons(C0,month)
@@ -20,7 +22,7 @@ for i in range(365):
     for i,t in enumerate(tournees_opt) :
         plot_tournee(t,name=f"{name_dir}/tournee_{i}")
 
-    C_after.plot(title=f"Configuration After Livraisons - Iteration {i}", path=f"{name_dir}/configuration_after_livraisons_iter_{i}.png")
+    C_after.plot(title=f"Configuration After Livraisons - Iteration {i}", path=f"{name_dir}/configuration_after_livraisons.png")
     C0, liste_ventes = ventes(C_after, month, df)
-    C0.plot(title=f"Configuration After Ventes - Iteration {i}", path=f"{name_dir}/configuration_after_ventes_iter_{i}.png")
+    C0.plot(title=f"Configuration After Ventes - Iteration {i}", path=f"{name_dir}/configuration_after_ventes.png")
 
