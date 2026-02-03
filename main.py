@@ -14,7 +14,7 @@ for i in range(365):
     month = months[jour.month]
     
     C_after, dist, tournees_opt = find_livraisons(C0,month)
-    name_dir = f"plots_and_data_for_day_{jour}"
+    name_dir = f"plots/plots_and_data_for_day_{jour}"
     os.makedirs(name_dir,exist_ok=True)
 
     for i,t in enumerate(tournees_opt) :

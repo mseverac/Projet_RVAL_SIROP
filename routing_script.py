@@ -210,7 +210,7 @@ def create_data_models(C0,C1,stock : bool):
         data_prime["depots"] = [0,1,2,3]
 
 
-        if stock:
+        if stock == 2:
 
             configs = []
             for i in range(4):
@@ -228,9 +228,26 @@ def create_data_models(C0,C1,stock : bool):
                 data_prime["start"] = data_prime["start"] + [start_config]*N
                 data_prime["end"]   = data_prime["end"]   + [end_config]*N
 
-        else : 
+        elif stock == 0 : 
             configs = []
             for i in range(2,4):
+                for j in range(4):
+                    configs.append( (i,j) )
+
+
+            N = 10
+
+
+            data_prime["start"] = []
+            data_prime["end"]   = []
+
+            for idx, (start_config, end_config) in enumerate(configs):
+                data_prime["start"] = data_prime["start"] + [start_config]*N
+                data_prime["end"]   = data_prime["end"]   + [end_config]*N
+
+        else :
+            configs = []
+            for i in (0,2,3):
                 for j in range(4):
                     configs.append( (i,j) )
 
@@ -468,16 +485,24 @@ def find_livraisons(C0,month):
     C0p = cp.deepcopy(C0)
 
     try :
-        tournees = solve_and_create_tournees(C0p, C1, month,stock=True, plot=False)
+        tournees = solve_and_create_tournees(C0p, C1, month,stock=2, plot=False)
         for t in tournees:
             t.effectuer_tournee()
 
     except :
-        print("Pas assez de stock. Passage par les Plants")
-        tournees = solve_and_create_tournees(C0p, C1, month,stock=False, plot=False)
-        for t in tournees:
+        print("Pas assez de stock. Départ uniquement du Warehouse0")
 
-            t.effectuer_tournee()
+        try :
+            tournees = solve_and_create_tournees(C0p, C1, month,stock=1, plot=False)
+            for t in tournees:
+                t.effectuer_tournee()
+
+        except :
+            print("Pas de stock. Aucun départ des Warehouses")
+            tournees = solve_and_create_tournees(C0p, C1, month,stock=0, plot=False)
+            for t in tournees:
+
+                t.effectuer_tournee()
 
     #C0p.plot()
 
