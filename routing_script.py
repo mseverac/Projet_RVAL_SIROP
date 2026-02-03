@@ -479,34 +479,27 @@ def find_livraisons(C0,month):
 
             t.effectuer_tournee()
 
+    #C0p.plot()
 
+    tournees_opt = []
     for t in tournees:
-        plot_tournee(t)
-        t.optimiser(C0p, month)
-        plot_tournee(t)
+        
+        t_opt = cp.deepcopy(t)
 
+        t_opt.with_config(C0p)
+        t_opt.optimiser(C0p, month)
+    
+        t.undo_tournee()
+   
+        t_opt.with_config(C0p)
+    
+        t_opt.unload_final_warehouse()
+        t_opt.effectuer_tournee()
 
-    """C0p2 = cp.deepcopy(C0)
-
-    for t in tournees:
-        t.effectuer_tournee()"""
-
-
-
-
-
-
-    return C0p,total_dist(tournees)
+        tournees_opt.append(t_opt)
 
 
 
-C0 = configuration_initiale()
-
-for w in C0.warehouses: 
-    w.current_stock = (0,0)
+    return C0p,total_dist(tournees), tournees_opt
 
 
-C_after, dist = find_livraisons(C0,"Mai")
-
-
-C_after.plot()

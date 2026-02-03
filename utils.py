@@ -2,6 +2,7 @@ import matplotlib.pyplot as plt
 import math as ma
 import pandas as pd
 from scipy.stats import norm
+import copy as cp   
 
 
 TRUCK_CAPACITY = 20 # m3
@@ -37,10 +38,13 @@ class Shop :
             return False
 
     def truck_stop(self, amount_delivered):
-        if add_tuples(amount_delivered, self.current_stock) >= (0,0) and add_tuples(amount_delivered, self.current_stock) <= self.capacity:
+        if add_tuples(amount_delivered, self.current_stock)[0] >= 0 and add_tuples(amount_delivered, self.current_stock)[1] >= 0 and add_tuples(amount_delivered, self.current_stock) <= self.capacity:
             self.current_stock = add_tuples(amount_delivered, self.current_stock)
             return amount_delivered
         else:
+            print("Current stock :", self.current_stock)
+            print("Amount delivered :", amount_delivered)
+            print("Capacity :", self.capacity)
             raise ValueError(f"Wrong stock after delivery : {add_tuples(self.current_stock, amount_delivered)}")
             return 0
         
@@ -121,7 +125,7 @@ class Configuration():
         for shop in self.shops:
             print(f"Shop {shop.id} at position ({shop.x},{shop.y}) with capacity {shop.capacity} and current stock {shop.current_stock}")
 
-    def plot(self):
+    def plot(self,title="Stock Configuration",path=None):
         plt.figure(figsize=(10,6))
         for plant in self.plants:
             plt.scatter(plant.x, plant.y, c='green', marker='x', s=50, label='Plant' if plant.id == 0 else "")
@@ -137,12 +141,15 @@ class Configuration():
             plt.text(shop.x, shop.y, f"S{shop.id}", fontsize=12, ha='center', va='center', color='black')
             plt.text(shop.x, shop.y-0.2, f"C:{shop.current_stock}", fontsize=10, ha='center', va='center', color='black')
         
-        plt.title("Stock Configuration")
+        plt.title(title)
         plt.xlabel("X Coordinate")
         plt.ylabel("Y Coordinate")
         #plt.legend()
         plt.grid()
-        plt.show()
+        if path is not None:
+            plt.savefig(path)
+        else :
+            plt.show()
 
 
 def get_nearest_warehouse(x,y,config: Configuration):
@@ -162,10 +169,10 @@ def get_nearest_warehouse(x,y,config: Configuration):
 def best_truck_load(month, max_V=TRUCK_CAPACITY):
     """Truck capacity en m3"""
 
-    print(f"max_v before int: {max_V}")
+    #print(f"max_v before int: {max_V}")
 
     max_V = int(round(max_V * 10))
-    print(f"max_v after int: {max_V}")
+    #print(f"max_v after int: {max_V}")
     V_clim = 8
     V_heater = 4
     
@@ -233,6 +240,12 @@ def esperance_pertes(shop_id, product, stock, current_month,df):
 
 
 def ajoute_produit_au_meilleur(shops, product,month):
+
+    for s in shops:
+        current_stock = s.current_stock[0] if product == "P1" else s.current_stock[1]
+        if current_stock >= s.capacity[0] if product == "P1" else s.capacity[1]:
+            shops.remove(s)
+
     max_perte_reduction = 0
     best_shop = None
     i_best_shop = None
@@ -249,6 +262,19 @@ def ajoute_produit_au_meilleur(shops, product,month):
             i_best_shop = i
     return best_shop, i_best_shop
 
+
+def find_lieu(x,y,config: Configuration):
+    for plant in config.plants:
+        if plant.x == x and plant.y == y:
+            return plant
+    for warehouse in config.warehouses:
+        if warehouse.x == x and warehouse.y == y:
+            return warehouse
+    for shop in config.shops:
+        if shop.x == x and shop.y == y:
+            return shop
+    return None
+
 class Tournee:
     def __init__(self, home, list_arrets,end=None):
         self.home = home
@@ -258,6 +284,31 @@ class Tournee:
             self.end = home
         else:
             self.end = end
+
+    def unload_final_warehouse(self):
+        total_load = (0,0)
+        for lieu, amount in self.list_arrets:
+            total_load = sub_tuples(total_load, amount)
+
+        if isinstance(self.end, Warehouse):
+            self.list_arrets.append((self.end, total_load))
+            #print(f"Unloading final warehouse {self.end.id} with load {total_load}")
+
+
+    def with_config(self, config: Configuration):
+        new_home = find_lieu(self.home.x, self.home.y, config)
+        new_end = find_lieu(self.end.x, self.end.y, config)
+        new_list_arrets = []
+        for lieu, amount in self.list_arrets:
+            new_lieu = find_lieu(lieu.x, lieu.y, config)
+            new_list_arrets.append((new_lieu, amount))
+
+        self.home = new_home
+        self.end = new_end
+        self.list_arrets = new_list_arrets
+        
+
+
 
     def take_max_load_at(self, lieu,id, month):
         #print(" ")
@@ -303,23 +354,30 @@ class Tournee:
 
     def repartir_load_among_shops(self,load_clim,load_heater, shops_ids, month):
         shops = [shops_ids[i][0] for i in range(len(shops_ids))]
+        cp_shops = cp.deepcopy(shops)
+
 
         #for P1
         while load_clim > 0:
-            best_shop, i_best_shop = ajoute_produit_au_meilleur(shops, "P1", month)
+            best_shop, i_best_shop = ajoute_produit_au_meilleur(cp_shops, "P1", month)
             if best_shop is None:
                 print("No shop needs more clim")
                 break
             else:
+                best_shop.current_stock = (best_shop.current_stock[0]+1, best_shop.current_stock[1])
+
                 self.list_arrets[shops_ids[i_best_shop][1]] = (best_shop, add_tuples(self.list_arrets[shops_ids[i_best_shop][1]][1], (1,0)))
                 load_clim -= 1
         #for P2
         while load_heater > 0:
-            best_shop, i_best_shop = ajoute_produit_au_meilleur(shops, "P2", month)
+
+            best_shop, i_best_shop = ajoute_produit_au_meilleur(cp_shops, "P2", month)
             if best_shop is None:
                 print("No shop needs more heater")
                 break
             else:
+                best_shop.current_stock = (best_shop.current_stock[0]+1, best_shop.current_stock[1])
+
                 self.list_arrets[shops_ids[i_best_shop][1]] = (best_shop, add_tuples(self.list_arrets[shops_ids[i_best_shop][1]][1], (0,1)))
                 load_heater -= 1
 
@@ -433,6 +491,16 @@ class Tournee:
             remplissage_camion += V_clim * amount[0] + V_heater * amount[1]
             if remplissage_camion > TRUCK_CAPACITY:
                 raise ValueError("Truck over capacity")
+            
+
+    def undo_tournee(self):
+        for lieu, amount in self.list_arrets:
+            if isinstance(lieu, Plant) is False:
+                
+                lieu.truck_stop((-amount[0], -amount[1]))
+    
+
+            
             
 
     def calculer_distance_totale(self):
