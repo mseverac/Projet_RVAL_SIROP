@@ -11,6 +11,7 @@ debut = date(2024, 1, 1)
 
 for i in range(365):
     jour = debut + timedelta(days=i)
+    print(" ")
     print("Calcul pour le jour : ",jour)
 
     month = months[jour.month]

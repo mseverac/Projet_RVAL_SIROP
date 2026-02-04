@@ -121,20 +121,53 @@ def supr_shops_with_no_demand(data):
     data["start"] = new_start
     data["end"] = new_end
 
-def create_data_models(C0,C1,stock : int):
 
-    data = {}
+def create_data_models(C0, C1, starts,ends):
 
-    
+    def build_configs(starts, ends ):
+        """Retourne la liste des couples (start, end) selon le type de stock."""
+        
+        return [(i, j) for i in starts for j in ends]
 
-    demande1 , demande2 = compute_demands(C0, C1)
-    demande1_prime = [0 for _ in range(len(demande1))] 
-    demande2_prime = [0 for _ in range(len(demande2))]
+    def expand_configs(configs, N=10):
+        """Génère les listes start et end répétées N fois."""
+        start, end = [], []
+        for s, e in configs:
+            start += [s] * N
+            end += [e] * N
+        return start, end
 
-    double_demand = False   
+    def build_data(demande1, demande2):
+        """Construit un dictionnaire data à partir des demandes."""
+        data = {}
 
-    for i,(d1, d2) in enumerate(zip(demande1, demande2)):
-        if compute_volume(d1,d2) > 200 :
+        data["distance_matrix"] = distance_matrix
+        data["demands"]  = [0, 0, 0, 0] + demande1
+        data["demands2"] = [0, 0, 0, 0] + demande2
+        data["depots"] = [0, 1, 2, 3]
+
+        configs = build_configs(starts,ends)
+        start, end = expand_configs(configs)
+
+        data["start"] = start
+        data["end"] = end
+
+        data["num_vehicles"] = len(start)
+        data["vehicle_volume_capacity"] = [200] * len(start)
+
+        return data
+
+    # ---- Corps principal ----
+
+    demande1, demande2 = compute_demands(C0, C1)
+
+    demande1_prime = [0] * len(demande1)
+    demande2_prime = [0] * len(demande2)
+
+    double_demand = False
+
+    for i, (d1, d2) in enumerate(zip(demande1, demande2)):
+        if compute_volume(d1, d2) > 200:
             double_demand = True
             print(f"Warning: demand at shop {i} exceeds vehicle capacity.")
 
@@ -144,135 +177,10 @@ def create_data_models(C0,C1,stock : int):
             demande1[i] = d1 - demande1_prime[i]
             demande2[i] = d2 - demande2_prime[i]
 
-
-
-    data["distance_matrix"] = distance_matrix
-
-    data["demands"]  = [0,0,0,0] + demande1
-    data["demands2"] = [0,0,0,0] + demande2
-
-    data["depots"] = [0,1,2,3]
-
-
-
-    if stock:
-
-        configs = []
-        for i in range(4):
-            for j in range(4):
-                configs.append( (i,j) )
-
-
-        N = 10
-
-
-        data["start"] = []
-        data["end"]   = []
-
-        for idx, (start_config, end_config) in enumerate(configs):
-            data["start"] = data["start"] + [start_config]*N
-            data["end"]   = data["end"]   + [end_config]*N
-
-    else : 
-        configs = []
-        for i in range(2,4):
-            for j in range(4):
-                configs.append( (i,j) )
-
-
-        N = 10
-
-
-        data["start"] = []
-        data["end"]   = []
-
-        for idx, (start_config, end_config) in enumerate(configs):
-            data["start"] = data["start"] + [start_config]*N
-            data["end"]   = data["end"]   + [end_config]*N
-
-
-
-    data["num_vehicles"] = len(data["start"])
-    data["vehicle_volume_capacity"] = [200] * data["num_vehicles"]
-
-    #print(data)
+    datas = [build_data(demande1, demande2)]
 
     if double_demand:
-        datas = []
-
-        data_prime = {}
-
-        data_prime["distance_matrix"] = distance_matrix
-
-        data_prime["demands"]  = [0,0,0,0] + demande1_prime
-        data_prime["demands2"] = [0,0,0,0] + demande2_prime
-
-        data_prime["depots"] = [0,1,2,3]
-
-
-        if stock == 2:
-
-            configs = []
-            for i in range(4):
-                for j in range(4):
-                    configs.append( (i,j) )
-
-
-            N = 10
-
-
-            data_prime["start"] = []
-            data_prime["end"]   = []
-
-            for idx, (start_config, end_config) in enumerate(configs):
-                data_prime["start"] = data_prime["start"] + [start_config]*N
-                data_prime["end"]   = data_prime["end"]   + [end_config]*N
-
-        elif stock == 0 : 
-            configs = []
-            for i in range(2,4):
-                for j in range(4):
-                    configs.append( (i,j) )
-
-
-            N = 10
-
-
-            data_prime["start"] = []
-            data_prime["end"]   = []
-
-            for idx, (start_config, end_config) in enumerate(configs):
-                data_prime["start"] = data_prime["start"] + [start_config]*N
-                data_prime["end"]   = data_prime["end"]   + [end_config]*N
-
-        else :
-            configs = []
-            for i in (0,2,3):
-                for j in range(4):
-                    configs.append( (i,j) )
-
-
-            N = 10
-
-
-            data_prime["start"] = []
-            data_prime["end"]   = []
-
-            for idx, (start_config, end_config) in enumerate(configs):
-                data_prime["start"] = data_prime["start"] + [start_config]*N
-                data_prime["end"]   = data_prime["end"]   + [end_config]*N
-
-
-
-        data_prime["num_vehicles"] = len(data_prime["start"])
-        data_prime["vehicle_volume_capacity"] = [200] * data_prime["num_vehicles"]
-        datas.append(data)
-        datas.append(data_prime)
-
-    else:
-        datas =  [data]
-
-    
+        datas.append(build_data(demande1_prime, demande2_prime))
 
     return datas
 
@@ -374,8 +282,11 @@ def create_tournees(data, manager, routing, solution, nodes):
 
 
 
-def solve_and_create_tournees(C0, C1 ,month,stock : bool,plot = False):
-    datas = create_data_models(C0,C1, stock)
+def solve_and_create_tournees(C0 : Configuration, C1 ,month,starts,ends,plot = False):
+
+
+
+    datas = create_data_models(C0,C1, starts,ends)
 
     tournees = []
 
@@ -476,33 +387,78 @@ def optimise_tournees(C, month, list_tournees):
         t.optimiser_tournee(C, month)
 
 
+def find_livraisons(C0, month):
 
-def find_livraisons(C0,month):
+    def try_solve(starts,ends, message=None):
+        """Tente de résoudre avec un stock donné. Retourne True si succès."""
+        try:
+            if message:
+                print(message)
+            tournees = solve_and_create_tournees(C0p, C1, month, starts,ends, plot=False)
+            for t in tournees:
+                t.effectuer_tournee()
+            return tournees
+
+        except Exception:
+            if message:
+                print("Fail de : ",message)
+            
+            return False
 
     C1 = configuration_minimale(month, df)
-
-
     C0p = cp.deepcopy(C0)
 
-    try :
-        tournees = solve_and_create_tournees(C0p, C1, month,stock=2, plot=False)
-        for t in tournees:
-            t.effectuer_tournee()
+    W0 : Warehouse= C0p.warehouses[0] 
+    W1 : Warehouse= C0p.warehouses[1] 
 
-    except :
-        print("Pas assez de stock. Départ uniquement du Warehouse0")
 
-        try :
-            tournees = solve_and_create_tournees(C0p, C1, month,stock=1, plot=False)
-            for t in tournees:
-                t.effectuer_tournee()
+    if W0.is_stock_eleve() and W1.is_stock_eleve() :
+        strategies = [
+        (range(2),range(2), "W->W"),
+        (range(3),range(2), "W,P0->W"),
+        ((0,1,3),range(2), "W,P1->W"),
 
-        except :
-            print("Pas de stock. Aucun départ des Warehouses")
-            tournees = solve_and_create_tournees(C0p, C1, month,stock=0, plot=False)
-            for t in tournees:
+        (range(4),range(2), "W,P->W"),
+        ((0,2,3),range(2), "W0,P->W"),
+        ((1,2,3),range(2), "W1,P->W"),
 
-                t.effectuer_tournee()
+        (range(2,4),range(2), "P->W"),
+        ]
+
+    elif W0.is_stock_eleve():
+        strategies = [
+        ((0,1,3),(0,1,3), "W,P1->W,P1"),
+        (range(4),(0,1,3), "W,P->W,P1"),
+        ((0,2,3),(0,1,2), "W0,P->W,P1"),
+        (range(2,4),(0,1,3), "P->W,P1"),
+
+        ]
+
+    elif W1.is_stock_eleve():
+        strategies = [
+        ((0,1,2),(0,1,2), "W,P0->W,P0"),
+        (range(4),(0,1,2), "W,P->W,P0"),
+        (range(1,4),(0,1,2), "W1,P->W,P0"),
+        (range(2,4),(0,1,2), "P->W,P0"),        
+        ]
+
+
+    else :
+        strategies = [
+            (range(4),range(4), "W,P->W,P"),
+            (range(2,4),range(4), "P->W,P"),
+            
+        ]
+
+
+    
+
+
+    for starts,ends, message in strategies:
+        tournees = try_solve(starts,ends, message)
+        if tournees is not False :
+            break
+
 
     #C0p.plot()
 

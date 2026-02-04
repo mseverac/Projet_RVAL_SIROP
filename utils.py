@@ -13,6 +13,17 @@ V_clim = 0.8 # m3
 
 months = {1:'Janvier', 2:'Février', 3:'Mars', 4:'Avril', 5:'Mai', 6:'Juin', 7:'Juillet', 8:'Août', 9:'Septembre', 10:'Octobre', 11:'Novembre', 12:'Décembre'}
 ratio_clim_heater = {'Janvier': 0.26 , 'Février' : 0.51 , 'Mars' : 0.7 , 'Avril' : 0.86 , 'Mai' : 0.97 , 'Juin' : 1 , 'Juillet' : 0.97 , 'Août' : 0.86 , 'Septembre': 0.72 , 'Octobre' : 0.52 , 'Novembre' : 0.26 , 'Décembre' : 0}
+#ratio_clim_heater = {'Janvier': 0.36 , 'Février' : 0.61 , 'Mars' : 0.8 , 'Avril' : 0.96 , 'Mai' : 1 , 'Juin' : 1 , 'Juillet' : 1 , 'Août' : 0.96 , 'Septembre': 0.82 , 'Octobre' : 0.62 , 'Novembre' : 0.36 , 'Décembre' : 0.1}
+
+def ratio_plus_epsilon(ratio : dict,epsilon = 0.05):
+    for k in ratio.keys():
+        ratio[k] = min(1,ratio[k]+epsilon)
+
+    return ratio
+
+ratio_clim_heater = ratio_plus_epsilon(ratio_clim_heater,0.05)
+
+
 
 def add_tuples(t1, t2):
     return (t1[0] + t2[0], t1[1] + t2[1])
@@ -42,14 +53,14 @@ class Shop :
             return False
 
     def truck_stop(self, amount_delivered):
-        if add_tuples(amount_delivered, self.current_stock)[0] >= 0 and add_tuples(amount_delivered, self.current_stock)[1] >= 0 and add_tuples(amount_delivered, self.current_stock) <= self.capacity:
+        if add_tuples(amount_delivered, self.current_stock)[0] >= 0 and add_tuples(amount_delivered, self.current_stock)[1] >= 0 and add_tuples(amount_delivered, self.current_stock)[0] <= self.capacity[0] and add_tuples(amount_delivered, self.current_stock)[1] <= self.capacity[1]:
             self.current_stock = add_tuples(amount_delivered, self.current_stock)
             return amount_delivered
         else:
             print("Current stock :", self.current_stock)
             print("Amount delivered :", amount_delivered)
             print("Capacity :", self.capacity)
-            raise ValueError(f"Wrong stock after delivery : {add_tuples(self.current_stock, amount_delivered)}")
+            raise ValueError(f"Wrong stock after delivery in shop: {add_tuples(self.current_stock, amount_delivered)}")
             return 0
         
 
@@ -59,6 +70,13 @@ class Warehouse :
         self.x = x
         self.y = y
         self.current_stock = (0,0)
+
+
+    def is_stock_eleve(self):
+        if self.current_stock[0] > 300 or self.current_stock[1] > 300:
+            return True 
+        else :
+            return False
 
     def __str__(self):
         return f"Warehouse {self.id} at position ({self.x},{self.y}) with stock {self.current_stock}"
@@ -75,13 +93,13 @@ class Warehouse :
             return False
     
     def truck_stop(self, amount_delivered):
-        if add_tuples(amount_delivered, self.current_stock) >= (0,0) and add_tuples(amount_delivered, self.current_stock) <= (WAREHOUSE_CAPACITY, WAREHOUSE_CAPACITY):
+        if add_tuples(amount_delivered, self.current_stock)[0] >= 0 and add_tuples(amount_delivered, self.current_stock)[1] >= 0 and add_tuples(amount_delivered, self.current_stock)[0] <= WAREHOUSE_CAPACITY and add_tuples(amount_delivered, self.current_stock)[1] <= WAREHOUSE_CAPACITY:
             self.current_stock = add_tuples(amount_delivered, self.current_stock)
             return amount_delivered
         else:
             print(f"self : {self}")
             print(f"delivery : {amount_delivered}")
-            raise ValueError(f"Wrong stock after delivery : {add_tuples(self.current_stock, amount_delivered)}")
+            raise ValueError(f"Wrong stock after delivery in warehouse: {add_tuples(self.current_stock, amount_delivered)}, Warehouse : {self}")
             return 0
         
 
@@ -364,10 +382,15 @@ class Tournee:
                     load_clim, load_heater = load
                     self.list_arrets[i] = (l, add_tuples(amount, (-load_clim, -load_heater)))
                 elif isinstance(lieu, Warehouse) :
+                    print(f"taking max load in warehouse : {lieu}")
                     available_clim, available_heater = lieu.get_stock()
+                    print(f"available load : {available_clim,available_heater}")
+
                     load_clim1, load_heater1 = best_truck_load(month, TRUCK_CAPACITY - current_volume)
                     load_clim = min(load_clim1, available_clim)
                     load_heater = min(load_heater1, available_heater)
+
+                    print(f"load taken : {load_clim,load_heater} ")
 
                     if load_clim1 < load_clim :
                         V = load_clim * V_clim + load_heater * V_heater
@@ -381,8 +404,11 @@ class Tournee:
                             load_clim += 1
                             V = load_clim * V_clim + load_heater * V_heater
                         load_clim -= 1
+
+                    print(f"arret avant : {self.list_arrets[i]}")
                     self.list_arrets[i] = (l, add_tuples(amount, (-load_clim, -load_heater)))
 
+                    print(f"arret après : {self.list_arrets[i]}")
 
         return i, load_clim, load_heater
         
