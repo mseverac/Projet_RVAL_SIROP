@@ -5,6 +5,7 @@ from configuration import *
 import copy as cp
 from ortools.constraint_solver import routing_enums_pb2
 from ortools.constraint_solver import pywrapcp
+import traceback
 
 import matplotlib.pyplot as plt
 
@@ -393,17 +394,76 @@ def find_livraisons(C0, month):
         """Tente de résoudre avec un stock donné. Retourne True si succès."""
         try:
             if message:
-                print(message)
-            tournees = solve_and_create_tournees(C0p, C1, month, starts,ends, plot=False)
-            for t in tournees:
+                print("\033[92m" + message + "\033[0m")
+
+            tournees = solve_and_create_tournees(C0, C1, month, starts,ends, plot=False)
+
+
+            C0p : Configuration = cp.deepcopy(C0)
+            C0p.plot(title="Config avant effectuer tournee ",show=False)
+
+
+            for t in tournees :
+                t : Tournee
+                t.with_config(C0p)
+                #print(" t :",t)
                 t.effectuer_tournee()
+                #print(" t apres : ",t)
+
+            C0p.plot(title="Config apres effectuer tournee ",show=False)
+
+
+            tournees_opt = []
+
+            for t in tournees : 
+                t.with_config(C0p)
+                
+                t_opt = cp.deepcopy(t)
+                t : Tournee
+
+                C0p.plot(title="Config avant opt",show=False)
+                t_opt.plot(C0p,title = "tournee non optimisée" , show = False)
+
+                t_opt.with_config(C0p)
+                t_opt.optimiser(C0p, month)
+                t_opt.unload_final_warehouse()
+
+
+                t_opt.plot(C0p,title = "tournee optimisée" , show = False)
+                #plt.show()
+
+                tp = sub_tournees(t_opt,t)
+                tp.plot(C0p,title="tp",show=False)
+
+                tp.plot(C0p,title = "diff tournee " , show = False)
+
+                #plt.show()
+
+                tp.with_config(C0p)
+
+            
+                tp.effectuer_tournee()
+
+
+                C0p.plot(title="Config tournee apres tournee opt ",show=False)
+                #plt.show()
+
+
+                tournees_opt.append(t_opt)
+                plt.close("all")
             return tournees
 
-        except Exception:
+        except Exception as e:
             if message:
-                print("Fail de : ",message)
-            
+                print("Fail de :", message)
+
+            """print("Erreur :", e)
+            traceback.print_exc()"""
+            plt.close("all")
+
+
             return False
+        
 
     C1 = configuration_minimale(month, df)
     C0p = cp.deepcopy(C0)
@@ -460,27 +520,22 @@ def find_livraisons(C0, month):
             break
 
 
+
     #C0p.plot()
 
-    tournees_opt = []
+
+    C0p : Configuration
+
     for t in tournees:
+
+        t.with_config(C0p)
         
-        t_opt = cp.deepcopy(t)
+        t : Tournee
 
-        t_opt.with_config(C0p)
-        t_opt.optimiser(C0p, month)
-    
-        t.undo_tournee()
-   
-        t_opt.with_config(C0p)
-    
-        t_opt.unload_final_warehouse()
-        t_opt.effectuer_tournee()
-
-        tournees_opt.append(t_opt)
+        t.effectuer_tournee()
 
 
 
-    return C0p,total_dist(tournees), tournees_opt
+    return C0p,total_dist(tournees), tournees
 
 

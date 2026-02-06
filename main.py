@@ -16,14 +16,19 @@ for i in range(365):
 
     month = months[jour.month]
     
-    C_after, dist, tournees_opt = find_livraisons(C0,month)
+    C_after, dist,tournees = find_livraisons(C0,month)
     name_dir = f"plots/plots_and_data_for_day_{jour}"
     os.makedirs(name_dir,exist_ok=True)
 
-    for i,t in enumerate(tournees_opt) :
+    for i,t in enumerate(tournees) :
+        t : Tournee
         plot_tournee(t,name=f"{name_dir}/tournee_{i}")
+        t.save_txt(f"{name_dir}/tournee_{i}")
 
     C_after.plot(title=f"Configuration After Livraisons - Iteration {i}", path=f"{name_dir}/configuration_after_livraisons.png")
+    C_after : Configuration
+    C_after.save_txt(f"{name_dir}/configuration_after_livraisons Configuration After Livraisons - Iteration {i}")
     C0, liste_ventes = ventes(C_after, month, df)
     C0.plot(title=f"Configuration After Ventes - Iteration {i}", path=f"{name_dir}/configuration_after_ventes.png")
+    C0.save_txt(f"{name_dir}/configuration_after_ventes Configuration After Ventes - Iteration {i}")
 

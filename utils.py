@@ -14,6 +14,7 @@ V_clim = 0.8 # m3
 months = {1:'Janvier', 2:'Février', 3:'Mars', 4:'Avril', 5:'Mai', 6:'Juin', 7:'Juillet', 8:'Août', 9:'Septembre', 10:'Octobre', 11:'Novembre', 12:'Décembre'}
 ratio_clim_heater = {'Janvier': 0.26 , 'Février' : 0.51 , 'Mars' : 0.7 , 'Avril' : 0.86 , 'Mai' : 0.97 , 'Juin' : 1 , 'Juillet' : 0.97 , 'Août' : 0.86 , 'Septembre': 0.72 , 'Octobre' : 0.52 , 'Novembre' : 0.26 , 'Décembre' : 0}
 #ratio_clim_heater = {'Janvier': 0.36 , 'Février' : 0.61 , 'Mars' : 0.8 , 'Avril' : 0.96 , 'Mai' : 1 , 'Juin' : 1 , 'Juillet' : 1 , 'Août' : 0.96 , 'Septembre': 0.82 , 'Octobre' : 0.62 , 'Novembre' : 0.36 , 'Décembre' : 0.1}
+ratio_clim_heater = {'Janvier': 0.26 , 'Février' : 0.51 , 'Mars' : 0.7 , 'Avril' : 0.86 , 'Mai' : 0.97 , 'Juin' : 1 , 'Juillet' : 0.97 , 'Août' : 0.86 , 'Septembre': 0.72 , 'Octobre' : 0.52 , 'Novembre' : 0.26 , 'Décembre' : 0.2}
 
 def ratio_plus_epsilon(ratio : dict,epsilon = 0.05):
     for k in ratio.keys():
@@ -21,7 +22,7 @@ def ratio_plus_epsilon(ratio : dict,epsilon = 0.05):
 
     return ratio
 
-ratio_clim_heater = ratio_plus_epsilon(ratio_clim_heater,0.05)
+ratio_clim_heater = ratio_plus_epsilon(ratio_clim_heater,0.02)
 
 
 
@@ -38,6 +39,30 @@ class Shop :
         self.y = y
         self.capacity = (capacity, capacity)
         self.current_stock = (0,0)
+
+    def save_txt(self, filename):
+        with open(filename, "w") as f:
+            f.write(f"{self.id};{self.x};{self.y};"
+                    f"{self.capacity[0]},{self.capacity[1]};"
+                    f"{self.current_stock[0]},{self.current_stock[1]}")
+
+    @staticmethod
+    def load_txt(filename):
+        with open(filename, "r") as f:
+            data = f.read().strip().split(";")
+
+        id = int(data[0])
+        x = float(data[1])
+        y = float(data[2])
+
+        cap = tuple(map(int, data[3].split(",")))
+        stock = tuple(map(int, data[4].split(",")))
+
+        shop = Shop(id, x, y, cap[0])
+        shop.capacity = cap
+        shop.current_stock = stock
+
+        return shop
 
 
     def get_free_space(self):
@@ -71,6 +96,34 @@ class Warehouse :
         self.y = y
         self.current_stock = (0,0)
 
+    def save_txt(self, filename):
+        with open(filename, "w") as f:
+            f.write(f"{self.id};{self.x};{self.y};"
+                    f"{self.current_stock[0]},{self.current_stock[1]}")
+
+    @staticmethod
+    def load_txt(filename):
+        with open(filename, "r") as f:
+            data = f.read().strip().split(";")
+
+        id = int(data[0])
+        x = float(data[1])
+        y = float(data[2])
+
+        stock = tuple(map(int, data[3].split(",")))
+
+        w = Warehouse(id, x, y)
+        w.current_stock = stock
+
+        return w
+
+
+    def need_clim(self):
+        return self.current_stock[0] < 300
+
+    def need_heater(self):
+        return self.current_stock[1] < 300
+
 
     def is_stock_eleve(self):
         if self.current_stock[0] > 300 or self.current_stock[1] > 300:
@@ -80,6 +133,9 @@ class Warehouse :
 
     def __str__(self):
         return f"Warehouse {self.id} at position ({self.x},{self.y}) with stock {self.current_stock}"
+    
+    def __repr__(self):
+        return self.__str__()
 
 
 
@@ -109,6 +165,21 @@ class Plant :
         self.x = x
         self.y = y
 
+    def save_txt(self, filename):
+        with open(filename, "w") as f:
+            f.write(f"{self.id};{self.x};{self.y}")
+
+    @staticmethod
+    def load_txt(filename):
+        with open(filename, "r") as f:
+            data = f.read().strip().split(";")
+
+        id = int(data[0])
+        x = float(data[1])
+        y = float(data[2])
+
+        return Plant(id, x, y)
+
     def __str__(self):
         return f"Plant {self.id} at position ({self.x},{self.y})"
 
@@ -137,6 +208,68 @@ class Configuration():
         self.warehouses = warehouses
         self.shops = shops
 
+
+    def save_txt(self, filename):
+        with open(filename, "w") as f:
+
+            f.write("PLANTS\n")
+            for p in self.plants:
+                f.write(f"{p.id},{p.x},{p.y}\n")
+
+            f.write("WAREHOUSES\n")
+            for w in self.warehouses:
+                f.write(f"{w.id},{w.x},{w.y},"
+                        f"{w.current_stock[0]},{w.current_stock[1]}\n")
+
+            f.write("SHOPS\n")
+            for s in self.shops:
+                f.write(f"{s.id},{s.x},{s.y},"
+                        f"{s.capacity[0]},{s.capacity[1]},"
+                        f"{s.current_stock[0]},{s.current_stock[1]}\n")
+
+    @staticmethod
+    def load_txt(filename):
+        with open(filename, "r") as f:
+            lines = [l.strip() for l in f.readlines()]
+
+        plants = []
+        warehouses = []
+        shops = []
+
+        mode = None
+
+        for line in lines:
+            if line in ["PLANTS", "WAREHOUSES", "SHOPS"]:
+                mode = line
+                continue
+
+            data = line.split(",")
+
+            if mode == "PLANTS":
+                plants.append(Plant(int(data[0]),
+                                    float(data[1]),
+                                    float(data[2])))
+
+            elif mode == "WAREHOUSES":
+                w = Warehouse(int(data[0]),
+                              float(data[1]),
+                              float(data[2]))
+                w.current_stock = (int(data[3]), int(data[4]))
+                warehouses.append(w)
+
+            elif mode == "SHOPS":
+                s = Shop(int(data[0]),
+                         float(data[1]),
+                         float(data[2]),
+                         int(data[3]))
+
+                s.capacity = (int(data[3]), int(data[4]))
+                s.current_stock = (int(data[5]), int(data[6]))
+                shops.append(s)
+
+        return Configuration(plants, warehouses, shops)
+
+
     def print(self):
         print("Plants :")
         for plant in self.plants:
@@ -149,7 +282,7 @@ class Configuration():
         for shop in self.shops:
             print(f"Shop {shop.id} at position ({shop.x},{shop.y}) with capacity {shop.capacity} and current stock {shop.current_stock}")
 
-    def plot(self,title="Stock Configuration",path=None):
+    def plot(self,title="Stock Configuration",path=None,show = True):
         plt.figure(figsize=(10,6))
         for plant in self.plants:
             plt.scatter(plant.x, plant.y, c='green', marker='x', s=50, label='Plant' if plant.id == 0 else "")
@@ -173,7 +306,7 @@ class Configuration():
         if path is not None:
             plt.savefig(path)
             plt.close()
-        else :
+        elif show :
             plt.show()
 
 
@@ -191,15 +324,32 @@ def get_nearest_warehouse(x,y,config: Configuration):
     return nearest_warehouse
 
 
-def best_truck_load(month, max_V=TRUCK_CAPACITY):
+def best_truck_load(month, max_V=TRUCK_CAPACITY,needs = None):
     """Truck capacity en m3"""
 
 
     max_V = int(round(max_V * 10))
     V_clim = 8
     V_heater = 4
+
+    if needs == None or needs == (True,True) : 
+        print("needs both")
     
-    ratio = ratio_clim_heater[month]
+        ratio = ratio_clim_heater[month]
+
+    elif needs == (True,False):
+
+        ratio = 1
+        print("need clim")
+
+    elif needs == (False,True):
+        ratio = 0
+        print("need heater")
+    
+    else :
+        return (0,0)
+
+
 
     best_load = (0, 0)
     best_error = float("inf")
@@ -234,6 +384,8 @@ def best_truck_load(month, max_V=TRUCK_CAPACITY):
             best_volume = volume
             best_load = (int(n_clim), int(n_heater))
 
+
+    #print("best load :",best_load)
     return best_load
 
 
@@ -338,6 +490,125 @@ class Tournee:
         else:
             self.end = end
 
+
+    def list_ammount(self):
+        list_a = [a for _,a in self.list_arrets]
+        return list_a
+
+
+    def plot(self,config : Configuration,name=None,title = "Tournee Visualization", show = True):
+        home = self.home
+        list_arrets = self.list_arrets
+        list_tournee= [[home,(0,0)]] + list_arrets + [[self.end,(0,0)]]
+        stock_truck = (0,0)
+
+        plants = config.plants
+        warehouses = config.warehouses
+        shops = config.shops
+
+        plt.figure(figsize=(10,6))
+        for plant in plants:
+            plt.scatter(plant.x, plant.y, c='green', marker='x', s=50, label='Plant' if plant.id == 0 else "")
+            plt.text(plant.x, plant.y, f"P{plant.id}", fontsize=12, ha='center', va='center', color='black')
+
+        for warehouse in warehouses:
+            plt.scatter(warehouse.x, warehouse.y, c='blue', marker='x', s=50, label='Warehouse' if warehouse.id == 0 else "")
+            plt.text(warehouse.x, warehouse.y, f"W{warehouse.id}", fontsize=12, ha='center', va='center', color='black')
+            #plt.text(warehouse.x, warehouse.y-0.2, f"S:{warehouse.current_stock}", fontsize=10, ha='center', va='center', color='black')
+
+        for shop in shops:
+            plt.scatter(shop.x, shop.y, c='red', marker='x', s=50, label='Shop' if shop.id == 0 else "")
+            plt.text(shop.x, shop.y, f"S{shop.id}", fontsize=12, ha='center', va='center', color='black')
+            #plt.text(shop.x, shop.y-0.2, f"C:{shop.current_stock}", fontsize=10, ha='center', va='center', color='black')
+        
+        for i in range(len(list_tournee) - 1):
+            x0 = list_tournee[i][0].x
+            y0 = list_tournee[i][0].y
+            x1 = list_tournee[i+1][0].x
+            y1 = list_tournee[i+1][0].y
+
+            dx = x1 - x0
+            dy = y1 - y0
+
+            plt.arrow(
+                x0, y0,
+                dx, dy,
+                length_includes_head=True,
+                head_width=0.2,
+                head_length=0.2,
+                fc='black',
+                ec='black',
+                alpha=0.6
+            )
+            stock_truck = sub_tuples(stock_truck,list_tournee[i][1])
+            if stock_truck != (0,0):
+                plt.text((x0+x1)/2,(y0+y1)/2, f"stock={stock_truck}", fontsize=10, ha='center', va='center', color='black')
+
+        
+        plt.title(title+str(self.list_ammount()))
+        
+        plt.xlabel("X Coordinate")
+        plt.ylabel("Y Coordinate")
+        plt.legend()
+        plt.grid()
+
+        if name is not None : 
+            plt.savefig(name)
+            plt.close()
+        elif show :
+            plt.show()
+           
+
+
+
+
+    def save_txt(self, filename):
+        with open(filename, "w") as f:
+            # Enregistrement du point de départ
+            f.write(f"HOME:{self.home.x},{self.home.y}\n")
+
+            # Enregistrement des arrêts
+            for lieu, amount in self.list_arrets:
+                f.write(f"STOP:{lieu.x},{lieu.y}|{amount[0]},{amount[1]}\n")
+
+            # Enregistrement du point final
+            f.write(f"END:{self.end.x},{self.end.y}\n")
+
+    @staticmethod
+    def load_txt(filename, config):
+        with open(filename, "r") as f:
+            lines = [l.strip() for l in f.readlines()]
+
+        home = None
+        end = None
+        list_arrets = []
+
+        for line in lines:
+
+            if line.startswith("HOME:"):
+                coords = line.replace("HOME:", "")
+                x, y = map(float, coords.split(","))
+                home = find_lieu(x, y, config)
+
+            elif line.startswith("STOP:"):
+                content = line.replace("STOP:", "")
+                lieu_part, amount_part = content.split("|")
+
+                x, y = map(float, lieu_part.split(","))
+                amount = tuple(map(int, amount_part.split(",")))
+
+                lieu = find_lieu(x, y, config)
+                list_arrets.append((lieu, amount))
+
+            elif line.startswith("END:"):
+                coords = line.replace("END:", "")
+                x, y = map(float, coords.split(","))
+                end = find_lieu(x, y, config)
+
+        return Tournee(home, list_arrets, end)
+
+
+
     def unload_final_warehouse(self):
         total_load = (0,0)
         for lieu, amount in self.list_arrets:
@@ -377,20 +648,20 @@ class Tournee:
             #print(f"At stop {i} : {l} with amount {amount}, current volume {current_volume}")
             if l == lieu and i == id :
                 if isinstance(lieu, Plant) :
-                    load = best_truck_load(month, TRUCK_CAPACITY - current_volume)
+                    load = best_truck_load(month, TRUCK_CAPACITY - current_volume,(self.end.need_clim(),self.end.need_heater))
                     #print(f"Taking load {load} at Plant")
                     load_clim, load_heater = load
                     self.list_arrets[i] = (l, add_tuples(amount, (-load_clim, -load_heater)))
                 elif isinstance(lieu, Warehouse) :
-                    print(f"taking max load in warehouse : {lieu}")
+                    #print(f"taking max load in warehouse : {lieu}")
                     available_clim, available_heater = lieu.get_stock()
-                    print(f"available load : {available_clim,available_heater}")
+                    #print(f"available load : {available_clim,available_heater}")
 
                     load_clim1, load_heater1 = best_truck_load(month, TRUCK_CAPACITY - current_volume)
                     load_clim = min(load_clim1, available_clim)
                     load_heater = min(load_heater1, available_heater)
 
-                    print(f"load taken : {load_clim,load_heater} ")
+                    #print(f"load taken : {load_clim,load_heater} ")
 
                     if load_clim1 < load_clim :
                         V = load_clim * V_clim + load_heater * V_heater
@@ -405,15 +676,18 @@ class Tournee:
                             V = load_clim * V_clim + load_heater * V_heater
                         load_clim -= 1
 
-                    print(f"arret avant : {self.list_arrets[i]}")
+                    #print(f"arret avant : {self.list_arrets[i]}")
                     self.list_arrets[i] = (l, add_tuples(amount, (-load_clim, -load_heater)))
 
-                    print(f"arret après : {self.list_arrets[i]}")
+                     #print(f"arret après : {self.list_arrets[i]}")
 
         return i, load_clim, load_heater
         
 
     def repartir_load_among_shops(self,load_clim,load_heater, shops, month):
+
+
+        #self.plot(CONFIG_PARFAITE,title="avant repart",show=False)
 
         
 
@@ -428,7 +702,17 @@ class Tournee:
 
         repart_clim,remaing_clim = repartir_among_free_spaces(load_clim,free_space_clim)
         repart_heater,remaining_heater = repartir_among_free_spaces(load_heater,free_space_heater)
-        
+
+        for i,(shop,id) in enumerate(shops) :
+            #print(self.list_arrets[id][1])
+            #print((repart_clim[i],repart_heater[i]))
+            self.list_arrets[id] = (
+                self.list_arrets[id][0],
+                add_tuples(self.list_arrets[id][1], (repart_clim[i], repart_heater[i]))
+            )
+
+        #self.plot(CONFIG_PARFAITE,title="apres repart")
+
 
         return (remaing_clim,remaining_heater)
         
@@ -456,6 +740,8 @@ class Tournee:
                 shops.append((lieu, id_stop))
         load_clim, load_heater = self.repartir_load_among_shops(load_clim, load_heater, shops, month)
 
+        self.unload_final_warehouse()
+
         """if load_clim > 0 or load_heater > 0:
 
             print(f"After optimisation, remaining load : clim {load_clim}, heater {load_heater}")
@@ -475,6 +761,9 @@ class Tournee:
             tournee_str += f"load camion : {load}\n"
         tournee_str += f"Ending at {self.end}"
         return tournee_str
+    
+    def __repr__(self):
+        return self.__str__()
     
 
     def add_take_load(self, lieu):
@@ -543,7 +832,7 @@ class Tournee:
             
 
     def undo_tournee(self):
-        for lieu, amount in self.list_arrets:
+        for lieu, amount in reversed(self.list_arrets):
             if isinstance(lieu, Plant) is False:
                 
                 lieu.truck_stop((-amount[0], -amount[1]))
@@ -629,8 +918,12 @@ def total_dist(list_tournee : list):
 
 
 
+def sub_tournees(t1 : Tournee,t2: Tournee):
+    """C1 - C2"""
+    tr = cp.deepcopy(t1)
 
 
+    for i,((l,a1),(_,a2)) in enumerate(zip(t1.list_arrets,t2.list_arrets)):
+        tr.list_arrets[i] = (l,sub_tuples(a1,a2))
 
-
-
+    return tr
