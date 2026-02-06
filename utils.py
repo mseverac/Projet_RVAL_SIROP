@@ -22,7 +22,7 @@ def ratio_plus_epsilon(ratio : dict,epsilon = 0.05):
 
     return ratio
 
-ratio_clim_heater = ratio_plus_epsilon(ratio_clim_heater,0.02)
+ratio_clim_heater = ratio_plus_epsilon(ratio_clim_heater,0.00)
 
 
 
@@ -332,8 +332,10 @@ def best_truck_load(month, max_V=TRUCK_CAPACITY,needs = None):
     V_clim = 8
     V_heater = 4
 
+    print(needs)
+
     if needs == None or needs == (True,True) : 
-        print("needs both")
+        print("need both")
     
         ratio = ratio_clim_heater[month]
 
@@ -385,7 +387,7 @@ def best_truck_load(month, max_V=TRUCK_CAPACITY,needs = None):
             best_load = (int(n_clim), int(n_heater))
 
 
-    #print("best load :",best_load)
+    print("best load :",best_load)
     return best_load
 
 
@@ -648,7 +650,8 @@ class Tournee:
             #print(f"At stop {i} : {l} with amount {amount}, current volume {current_volume}")
             if l == lieu and i == id :
                 if isinstance(lieu, Plant) :
-                    load = best_truck_load(month, TRUCK_CAPACITY - current_volume,(self.end.need_clim(),self.end.need_heater))
+                    print("end : ",self.end)
+                    load = best_truck_load(month, TRUCK_CAPACITY - current_volume,(self.end.need_clim(),self.end.need_heater()))
                     #print(f"Taking load {load} at Plant")
                     load_clim, load_heater = load
                     self.list_arrets[i] = (l, add_tuples(amount, (-load_clim, -load_heater)))
@@ -657,7 +660,7 @@ class Tournee:
                     available_clim, available_heater = lieu.get_stock()
                     #print(f"available load : {available_clim,available_heater}")
 
-                    load_clim1, load_heater1 = best_truck_load(month, TRUCK_CAPACITY - current_volume)
+                    load_clim1, load_heater1 = best_truck_load(month, TRUCK_CAPACITY - current_volume,(self.end.need_clim(),self.end.need_heater()))
                     load_clim = min(load_clim1, available_clim)
                     load_heater = min(load_heater1, available_heater)
 
@@ -782,9 +785,11 @@ class Tournee:
 
         self.home = W
 
-    def end_at_warehouse(self,config: Configuration, month = None): 
+    def end_at_warehouse(self,config: Configuration, month = None):
+        W = get_nearest_warehouse(self.end.x, self.end.y, config)
+        W : Warehouse
         if isinstance(self.end, Plant):
-            load_clim,load_heater = best_truck_load(month)
+            load_clim,load_heater = best_truck_load(month,needs=(W.need_clim(),W.need_heater()))
             self.ajoute_arret((self.end, (-load_clim, -load_heater)),-1)
 
 

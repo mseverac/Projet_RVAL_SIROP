@@ -25,10 +25,10 @@ for i in range(365):
         plot_tournee(t,name=f"{name_dir}/tournee_{i}")
         t.save_txt(f"{name_dir}/tournee_{i}")
 
-    C_after.plot(title=f"Configuration After Livraisons - Iteration {i}", path=f"{name_dir}/configuration_after_livraisons.png")
+    C_after.plot(title=f"Configuration After Livraisons", path=f"{name_dir}/configuration_after_livraisons.png")
     C_after : Configuration
-    C_after.save_txt(f"{name_dir}/configuration_after_livraisons Configuration After Livraisons - Iteration {i}")
+    C_after.save_txt(f"{name_dir}/configuration_after_livraisons Configuration After Livraisons")
     C0, liste_ventes = ventes(C_after, month, df)
-    C0.plot(title=f"Configuration After Ventes - Iteration {i}", path=f"{name_dir}/configuration_after_ventes.png")
-    C0.save_txt(f"{name_dir}/configuration_after_ventes Configuration After Ventes - Iteration {i}")
+    C0.plot(title=f"Configuration After Ventes", path=f"{name_dir}/configuration_after_ventes.png")
+    C0.save_txt(f"{name_dir}/configuration_after_ventes Configuration After Ventes")
 
